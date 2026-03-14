@@ -21,24 +21,28 @@ export function ProductItem({
   const image = product.featuredImage;
   return (
     <Link
-      className="product-item"
+      className="product-card"
       key={product.id}
       prefetch="intent"
       to={variantUrl}
     >
-      {image && (
-        <Image
-          alt={image.altText || product.title}
-          aspectRatio="1/1"
-          data={image}
-          loading={loading}
-          sizes="(min-width: 45em) 400px, 100vw"
-        />
-      )}
-      <h4>{product.title}</h4>
-      <small>
-        <Money data={product.priceRange.minVariantPrice} />
-      </small>
+      <div className="product-card__image">
+        {image && (
+          <Image
+            alt={image.altText || product.title}
+            aspectRatio="3/4"
+            data={image}
+            loading={loading}
+            sizes="(min-width: 768px) 25vw, 50vw"
+          />
+        )}
+      </div>
+      <div className="product-card__info">
+        <h4 className="product-card__title">{product.title}</h4>
+        <span className="product-card__price">
+          <Money data={product.priceRange.minVariantPrice} />
+        </span>
+      </div>
     </Link>
   );
 }

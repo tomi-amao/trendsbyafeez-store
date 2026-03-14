@@ -18,13 +18,79 @@ export function Footer({
       <Await resolve={footerPromise}>
         {(footer) => (
           <footer className="footer">
-            {footer?.menu && header.shop.primaryDomain?.url && (
-              <FooterMenu
-                menu={footer.menu}
-                primaryDomainUrl={header.shop.primaryDomain.url}
-                publicStoreDomain={publicStoreDomain}
-              />
-            )}
+            <div className="footer__grid">
+              <div className="footer__brand">
+                <h2>{header.shop.name}</h2>
+                <p
+                  style={{
+                    fontSize: '0.8rem',
+                    opacity: 0.7,
+                    marginBottom: '1rem',
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Curated fashion for the modern individual. Quality
+                  craftsmanship meets contemporary design.
+                </p>
+                <div className="footer__newsletter-form">
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    aria-label="Email for newsletter"
+                  />
+                  <button type="button">Sign Up</button>
+                </div>
+              </div>
+              <div className="footer__col">
+                <h3>Shop</h3>
+                <ul>
+                  <li>
+                    <NavLink prefetch="intent" to="/collections">
+                      All Collections
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink prefetch="intent" to="/collections/all">
+                      New Arrivals
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink prefetch="intent" to="/search">
+                      Search
+                    </NavLink>
+                  </li>
+                </ul>
+              </div>
+              <div className="footer__col">
+                <h3>Help</h3>
+                <FooterLinks
+                  menu={footer?.menu}
+                  primaryDomainUrl={header.shop.primaryDomain.url}
+                  publicStoreDomain={publicStoreDomain}
+                />
+              </div>
+              <div className="footer__col">
+                <h3>Company</h3>
+                <ul>
+                  <li>
+                    <NavLink prefetch="intent" to="/pages/about">
+                      About
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink prefetch="intent" to="/account">
+                      Account
+                    </NavLink>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div className="footer__bottom">
+              <span>
+                &copy; {new Date().getFullYear()} {header.shop.name}. All rights
+                reserved.
+              </span>
+            </div>
           </footer>
         )}
       </Await>
@@ -32,20 +98,20 @@ export function Footer({
   );
 }
 
-function FooterMenu({
+function FooterLinks({
   menu,
   primaryDomainUrl,
   publicStoreDomain,
 }: {
-  menu: FooterQuery['menu'];
-  primaryDomainUrl: FooterProps['header']['shop']['primaryDomain']['url'];
+  menu: FooterQuery['menu'] | undefined;
+  primaryDomainUrl: string;
   publicStoreDomain: string;
 }) {
+  if (!menu) return null;
   return (
-    <nav className="footer-menu" role="navigation">
-      {(menu || FALLBACK_FOOTER_MENU).items.map((item) => {
+    <ul>
+      {menu.items.map((item) => {
         if (!item.url) return null;
-        // if the url is internal, we strip the domain
         const url =
           item.url.includes('myshopify.com') ||
           item.url.includes(publicStoreDomain) ||
@@ -53,77 +119,20 @@ function FooterMenu({
             ? new URL(item.url).pathname
             : item.url;
         const isExternal = !url.startsWith('/');
-        return isExternal ? (
-          <a href={url} key={item.id} rel="noopener noreferrer" target="_blank">
-            {item.title}
-          </a>
-        ) : (
-          <NavLink
-            end
-            key={item.id}
-            prefetch="intent"
-            style={activeLinkStyle}
-            to={url}
-          >
-            {item.title}
-          </NavLink>
+        return (
+          <li key={item.id}>
+            {isExternal ? (
+              <a href={url} rel="noopener noreferrer" target="_blank">
+                {item.title}
+              </a>
+            ) : (
+              <NavLink prefetch="intent" to={url}>
+                {item.title}
+              </NavLink>
+            )}
+          </li>
         );
       })}
-    </nav>
+    </ul>
   );
-}
-
-const FALLBACK_FOOTER_MENU = {
-  id: 'gid://shopify/Menu/199655620664',
-  items: [
-    {
-      id: 'gid://shopify/MenuItem/461633060920',
-      resourceId: 'gid://shopify/ShopPolicy/23358046264',
-      tags: [],
-      title: 'Privacy Policy',
-      type: 'SHOP_POLICY',
-      url: '/policies/privacy-policy',
-      items: [],
-    },
-    {
-      id: 'gid://shopify/MenuItem/461633093688',
-      resourceId: 'gid://shopify/ShopPolicy/23358013496',
-      tags: [],
-      title: 'Refund Policy',
-      type: 'SHOP_POLICY',
-      url: '/policies/refund-policy',
-      items: [],
-    },
-    {
-      id: 'gid://shopify/MenuItem/461633126456',
-      resourceId: 'gid://shopify/ShopPolicy/23358111800',
-      tags: [],
-      title: 'Shipping Policy',
-      type: 'SHOP_POLICY',
-      url: '/policies/shipping-policy',
-      items: [],
-    },
-    {
-      id: 'gid://shopify/MenuItem/461633159224',
-      resourceId: 'gid://shopify/ShopPolicy/23358079032',
-      tags: [],
-      title: 'Terms of Service',
-      type: 'SHOP_POLICY',
-      url: '/policies/terms-of-service',
-      items: [],
-    },
-  ],
-};
-
-function activeLinkStyle({
-  isActive,
-  isPending,
-}: {
-  isActive: boolean;
-  isPending: boolean;
-}) {
-  return {
-    fontWeight: isActive ? 'bold' : undefined,
-    color: isPending ? 'grey' : 'white',
-  };
 }

@@ -46,8 +46,15 @@ export default function Collections() {
   const {collections} = useLoaderData<typeof loader>();
 
   return (
-    <div className="collections">
-      <h1>Collections</h1>
+    <div className="collection" style={{paddingTop: 'calc(var(--header-height) + var(--announcement-height) + 2rem)'}}>
+      <div style={{padding: '0 clamp(1rem, 3vw, 2.5rem) 2rem'}}>
+        <h1 style={{
+          fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+          fontWeight: 300,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+        }}>Collections</h1>
+      </div>
       <PaginatedResourceSection<CollectionFragment>
         connection={collections}
         resourcesClassName="collections-grid"
@@ -73,7 +80,7 @@ function CollectionItem({
 }) {
   return (
     <Link
-      className="collection-item"
+      className="collection-showcase__card"
       key={collection.id}
       to={`/collections/${collection.handle}`}
       prefetch="intent"
@@ -81,13 +88,14 @@ function CollectionItem({
       {collection?.image && (
         <Image
           alt={collection.image.altText || collection.title}
-          aspectRatio="1/1"
           data={collection.image}
           loading={index < 3 ? 'eager' : undefined}
-          sizes="(min-width: 45em) 400px, 100vw"
+          sizes="(min-width: 768px) 33vw, 50vw"
+          className="collection-showcase__image"
         />
       )}
-      <h5>{collection.title}</h5>
+      <div className="collection-showcase__overlay" />
+      <span className="collection-showcase__label">{collection.title}</span>
     </Link>
   );
 }
