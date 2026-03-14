@@ -40,6 +40,27 @@ function loadDeferredData({context}: Route.LoaderArgs) {
   return {recommendedProducts};
 }
 
+/* ─── Scroll Reveal Hook ───────────────────────────────────────── */
+function useScrollReveal<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.classList.add('reveal--visible');
+          observer.disconnect();
+        }
+      },
+      {threshold: 0.1, rootMargin: '0px 0px -40px 0px'},
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return ref;
+}
+
 export default function Homepage() {
   const data = useLoaderData<typeof loader>();
   return (
@@ -89,8 +110,10 @@ function FeaturedProducts({
 }: {
   products: Promise<RecommendedProductsQuery | null>;
 }) {
+  const sectionRef = useScrollReveal<HTMLElement>();
+
   return (
-    <section className="homepage-section" aria-label="Featured Products">
+    <section ref={sectionRef} className="homepage-section reveal" aria-label="Featured Products">
       <div className="homepage-section__header">
         <h2 className="homepage-section__title">New Arrivals</h2>
         <Link to="/collections/all" className="homepage-section__link" prefetch="intent">
@@ -132,12 +155,13 @@ function CollectionShowcase({
 }: {
   collections: FeaturedCollectionFragment[];
 }) {
+  const sectionRef = useScrollReveal<HTMLElement>();
+
   if (!collections || collections.length < 2) return null;
-  // Show up to 3 collections as large editorial cards
   const showcaseCollections = collections.slice(0, 3);
 
   return (
-    <section className="homepage-section" aria-label="Collections">
+    <section ref={sectionRef} className="homepage-section reveal" aria-label="Collections">
       <div className="homepage-section__header">
         <h2 className="homepage-section__title">Collections</h2>
         <Link to="/collections" className="homepage-section__link" prefetch="intent">

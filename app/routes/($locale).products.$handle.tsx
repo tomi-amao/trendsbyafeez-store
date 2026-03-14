@@ -1,6 +1,6 @@
 import {redirect, useLoaderData, Await, Link} from 'react-router';
 import type {Route} from './+types/products.$handle';
-import {Suspense, useState, useCallback} from 'react';
+import {Suspense, useState} from 'react';
 import {
   getSelectedProductOptions,
   Analytics,
@@ -81,16 +81,23 @@ export default function Product() {
 
   const {title, descriptionHtml, vendor} = product;
 
-  // Collect all variant images for the gallery
+  // Collect all images for gallery
   const images = product.images?.nodes || [];
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const selectedImage = images[selectedImageIndex] || selectedVariant?.image;
 
+  // Horizontal tabs state (denimtears style)
+  const [activeTab, setActiveTab] = useState<'details' | 'shipping' | 'returns'>('details');
+
+  // Size chart modal state
+  const [sizeChartOpen, setSizeChartOpen] = useState(false);
+
   return (
     <>
       <div className="product">
-        {/* Image Gallery */}
+        {/* Image Gallery - vertical scroll on desktop */}
         <div className="product-gallery">
+          {/* Mobile: single main image + thumb strip */}
           <div className="product-gallery__main">
             {selectedImage && (
               <Image
@@ -103,6 +110,26 @@ export default function Product() {
               />
             )}
           </div>
+
+          {/* Desktop: scrollable image column — always rendered, falls back to variant image */}
+          <div className="product-gallery__scroll">
+            {(images.length > 0 ? images : selectedVariant?.image ? [selectedVariant.image] : []).map((img, idx) => (
+              <div
+                key={img.id}
+                className="product-gallery__scroll-item"
+                onClick={() => setSelectedImageIndex(idx)}
+              >
+                <Image
+                  alt={img.altText || `${title} ${idx + 1}`}
+                  data={img}
+                  sizes="(min-width: 768px) 55vw, 100vw"
+                  loading={idx < 2 ? 'eager' : 'lazy'}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Mobile thumbs */}
           {images.length > 1 && (
             <div className="product-gallery__thumbs">
               {images.map((img, idx) => (
@@ -125,7 +152,7 @@ export default function Product() {
           )}
         </div>
 
-        {/* Product Info (Sticky Sidebar) */}
+        {/* Product Info Sidebar */}
         <div className="product-info">
           {vendor && <p className="product-info__vendor">{vendor}</p>}
           <h1 className="product-info__title">{title}</h1>
@@ -139,26 +166,57 @@ export default function Product() {
           <ProductForm
             productOptions={productOptions}
             selectedVariant={selectedVariant}
+            onSizeChartClick={() => setSizeChartOpen(true)}
           />
 
-          {/* Accordion Tabs */}
-          <div className="product-tabs">
-            <AccordionTab title="Details" defaultOpen>
-              <div dangerouslySetInnerHTML={{__html: descriptionHtml}} />
-            </AccordionTab>
-            <AccordionTab title="Shipping">
-              <p>
-                Free standard shipping on orders over $300. Standard delivery takes
-                5–7 business days. Express options available at checkout.
-              </p>
-            </AccordionTab>
-            <AccordionTab title="Returns & Exchanges">
-              <p>
-                We accept returns within 14 days of delivery for a full refund.
-                Items must be unworn, unwashed, and in their original packaging
-                with tags attached.
-              </p>
-            </AccordionTab>
+          {/* Horizontal Tabs (denimtears style) */}
+          <div className="product-tabs-horizontal">
+            <div className="product-tabs-horizontal__nav">
+              <button
+                className={`product-tabs-horizontal__tab ${activeTab === 'details' ? 'product-tabs-horizontal__tab--active' : ''}`}
+                onClick={() => setActiveTab('details')}
+              >
+                Details
+              </button>
+              <button
+                className={`product-tabs-horizontal__tab ${activeTab === 'shipping' ? 'product-tabs-horizontal__tab--active' : ''}`}
+                onClick={() => setActiveTab('shipping')}
+              >
+                Shipping
+              </button>
+              <button
+                className={`product-tabs-horizontal__tab ${activeTab === 'returns' ? 'product-tabs-horizontal__tab--active' : ''}`}
+                onClick={() => setActiveTab('returns')}
+              >
+                Returns & Exchanges
+              </button>
+            </div>
+            <div className="product-tabs-horizontal__content">
+              {activeTab === 'details' && (
+                <div
+                  className="product-tabs-horizontal__panel"
+                  dangerouslySetInnerHTML={{__html: descriptionHtml}}
+                />
+              )}
+              {activeTab === 'shipping' && (
+                <div className="product-tabs-horizontal__panel">
+                  <p>
+                    Free standard shipping on all UK orders over £150. Standard delivery
+                    takes 3–5 business days. Express and international shipping options
+                    available at checkout.
+                  </p>
+                </div>
+              )}
+              {activeTab === 'returns' && (
+                <div className="product-tabs-horizontal__panel">
+                  <p>
+                    We accept returns within 14 days of delivery for a full refund.
+                    Items must be unworn, unwashed, and in original packaging with all
+                    tags attached. All sale items are final sale.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -178,6 +236,46 @@ export default function Product() {
           }}
         />
       </div>
+
+      {/* Size Chart Modal */}
+      {sizeChartOpen && (
+        <div className="size-chart-overlay" onClick={() => setSizeChartOpen(false)}>
+          <div className="size-chart-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="size-chart-modal__header">
+              <h3>Size Chart</h3>
+              <button
+                className="size-chart-modal__close"
+                onClick={() => setSizeChartOpen(false)}
+                aria-label="Close size chart"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="size-chart-modal__body">
+              <table className="size-chart-table">
+                <thead>
+                  <tr>
+                    <th>Size</th>
+                    <th>Chest (in)</th>
+                    <th>Waist (in)</th>
+                    <th>Length (in)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>S</td><td>36–38</td><td>28–30</td><td>27</td></tr>
+                  <tr><td>M</td><td>38–40</td><td>30–32</td><td>28</td></tr>
+                  <tr><td>L</td><td>40–42</td><td>32–34</td><td>29</td></tr>
+                  <tr><td>XL</td><td>42–44</td><td>34–36</td><td>30</td></tr>
+                  <tr><td>XXL</td><td>44–46</td><td>36–38</td><td>31</td></tr>
+                </tbody>
+              </table>
+              <p className="size-chart-modal__note">
+                Measurements are approximate. For the best fit, we recommend measuring your body and comparing with the chart above.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* You May Also Like */}
       <Suspense>
@@ -202,60 +300,6 @@ export default function Product() {
         </Await>
       </Suspense>
     </>
-  );
-}
-
-/* ─── Accordion Tab ────────────────────────────────────────────── */
-function AccordionTab({
-  title,
-  children,
-  defaultOpen = false,
-}: {
-  title: string;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-
-  return (
-    <div className={`product-tab ${open ? 'product-tab--open' : ''}`}>
-      <button
-        className="product-tab__trigger"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-      >
-        <span>{title}</span>
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 12 12"
-          fill="none"
-          style={{
-            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.3s ease',
-          }}
-        >
-          <path
-            d="M2 4L6 8L10 4"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
-      <div
-        className="product-tab__content"
-        style={{
-          maxHeight: open ? '500px' : '0',
-          opacity: open ? 1 : 0,
-          overflow: 'hidden',
-          transition: 'max-height 0.4s ease, opacity 0.3s ease',
-        }}
-      >
-        <div style={{paddingBottom: '1rem'}}>{children}</div>
-      </div>
-    </div>
   );
 }
 

@@ -11,22 +11,44 @@ import type {ProductFragment} from 'storefrontapi.generated';
 export function ProductForm({
   productOptions,
   selectedVariant,
+  onSizeChartClick,
 }: {
   productOptions: MappedProductOptions[];
   selectedVariant: ProductFragment['selectedOrFirstAvailableVariant'];
+  onSizeChartClick?: () => void;
 }) {
   const navigate = useNavigate();
   const {open} = useAside();
+
+  // Check if any size option is selected
+  const sizeOption = productOptions.find(
+    (opt) => opt.name.toLowerCase() === 'size',
+  );
+  const hasSizeSelected = sizeOption?.optionValues.some((v) => v.selected);
+
   return (
     <div className="product-form">
       {productOptions.map((option) => {
-        // If there is only a single value in the option values, don't display the option
         if (option.optionValues.length === 1) return null;
+
+        const isSize = option.name.toLowerCase() === 'size';
+        const isColor = option.name.toLowerCase() === 'color' || option.name.toLowerCase() === 'colour';
 
         return (
           <div className="product-options" key={option.name}>
-            <h5>{option.name}</h5>
-            <div className="product-options-grid">
+            <div className="product-options__header">
+              <h5>{option.name}</h5>
+              {isSize && onSizeChartClick && (
+                <button
+                  type="button"
+                  className="product-options__size-chart"
+                  onClick={onSizeChartClick}
+                >
+                  View size chart +
+                </button>
+              )}
+            </div>
+            <div className={`product-options-grid ${isColor ? 'product-options-grid--color' : ''} ${isSize ? 'product-options-grid--size' : ''}`}>
               {option.optionValues.map((value) => {
                 const {
                   name,
@@ -39,48 +61,31 @@ export function ProductForm({
                   swatch,
                 } = value;
 
+                const itemClass = isColor
+                  ? 'product-options-item product-options-item--color'
+                  : isSize
+                  ? 'product-options-item product-options-item--size'
+                  : 'product-options-item';
+
                 if (isDifferentProduct) {
-                  // SEO
-                  // When the variant is a combined listing child product
-                  // that leads to a different url, we need to render it
-                  // as an anchor tag
                   return (
                     <Link
-                      className="product-options-item"
+                      className={`${itemClass}${selected ? ' product-options-item--selected' : ''}${!available ? ' product-options-item--unavailable' : ''}`}
                       key={option.name + name}
                       prefetch="intent"
                       preventScrollReset
                       replace
                       to={`/products/${handle}?${variantUriQuery}`}
-                      style={{
-                        border: selected
-                          ? '1px solid black'
-                          : '1px solid transparent',
-                        opacity: available ? 1 : 0.3,
-                      }}
                     >
-                      <ProductOptionSwatch swatch={swatch} name={name} />
+                      <ProductOptionSwatch swatch={swatch} name={name} isColor={isColor} />
                     </Link>
                   );
                 } else {
-                  // SEO
-                  // When the variant is an update to the search param,
-                  // render it as a button with javascript navigating to
-                  // the variant so that SEO bots do not index these as
-                  // duplicated links
                   return (
                     <button
                       type="button"
-                      className={`product-options-item${
-                        exists && !selected ? ' link' : ''
-                      }`}
+                      className={`${itemClass}${selected ? ' product-options-item--selected' : ''}${!available ? ' product-options-item--unavailable' : ''}${exists && !selected ? ' link' : ''}`}
                       key={option.name + name}
-                      style={{
-                        border: selected
-                          ? '1px solid black'
-                          : '1px solid transparent',
-                        opacity: available ? 1 : 0.3,
-                      }}
                       disabled={!exists}
                       onClick={() => {
                         if (!selected) {
@@ -91,13 +96,12 @@ export function ProductForm({
                         }
                       }}
                     >
-                      <ProductOptionSwatch swatch={swatch} name={name} />
+                      <ProductOptionSwatch swatch={swatch} name={name} isColor={isColor} />
                     </button>
                   );
                 }
               })}
             </div>
-            <br />
           </div>
         );
       })}
@@ -118,7 +122,11 @@ export function ProductForm({
             : []
         }
       >
-        {selectedVariant?.availableForSale ? 'Add to cart' : 'Sold out'}
+        {selectedVariant?.availableForSale
+          ? hasSizeSelected === false && sizeOption
+            ? 'Select a size'
+            : 'Add to cart'
+          : 'Sold out'}
       </AddToCartButton>
     </div>
   );
@@ -127,19 +135,35 @@ export function ProductForm({
 function ProductOptionSwatch({
   swatch,
   name,
+  isColor,
 }: {
   swatch?: Maybe<ProductOptionValueSwatch> | undefined;
   name: string;
+  isColor?: boolean;
 }) {
   const image = swatch?.image?.previewImage?.url;
   const color = swatch?.color;
+
+  if (isColor && (image || color)) {
+    return (
+      <div
+        aria-label={name}
+        className="product-option-swatch"
+        style={{
+          backgroundColor: color || 'transparent',
+        }}
+      >
+        {!!image && <img src={image} alt={name} />}
+      </div>
+    );
+  }
 
   if (!image && !color) return name;
 
   return (
     <div
       aria-label={name}
-      className="product-option-label-swatch"
+      className="product-option-swatch"
       style={{
         backgroundColor: color || 'transparent',
       }}
