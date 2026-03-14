@@ -170,6 +170,18 @@ export default function Collection() {
         )}
       </PaginatedResourceSection>
 
+      {/* Sparse collection prompt */}
+      {productCount <= 2 && (
+        <div className="collection-sparse">
+          <p className="collection-sparse__text">
+            More styles coming soon.
+          </p>
+          <Link to="/collections" className="collection-sparse__link">
+            Explore All Collections
+          </Link>
+        </div>
+      )}
+
       <Analytics.CollectionView
         data={{
           collection: {
