@@ -29,6 +29,9 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   const url = new URL(request.url);
   const sortKey = url.searchParams.get('sort') || 'COLLECTION_DEFAULT';
   const reverse = url.searchParams.get('reverse') === 'true';
+  const availableOnly = url.searchParams.get('available') === 'true';
+
+  const filters: {available?: boolean}[] = availableOnly ? [{available: true}] : [];
 
   const [{collection}] = await Promise.all([
     storefront.query(COLLECTION_QUERY, {
@@ -36,6 +39,7 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
         handle,
         sortKey: sortKey as any,
         reverse,
+        filters,
         ...paginationVariables,
       },
     }),
@@ -72,6 +76,7 @@ export default function Collection() {
 
   const currentSort = searchParams.get('sort') || 'COLLECTION_DEFAULT';
   const currentReverse = searchParams.get('reverse') === 'true';
+  const availableFilter = searchParams.get('available') === 'true';
 
   const handleSort = useCallback(
     (value: string, reverse: boolean) => {
@@ -88,7 +93,24 @@ export default function Collection() {
     [navigate, searchParams],
   );
 
+  const handleAvailability = useCallback(
+    (available: boolean) => {
+      const params = new URLSearchParams(searchParams);
+      if (available) {
+        params.set('available', 'true');
+      } else {
+        params.delete('available');
+      }
+      navigate(`?${params.toString()}`, {preventScrollReset: true});
+    },
+    [navigate, searchParams],
+  );
+
   const productCount = collection.products.nodes.length;
+  const currentSortLabel =
+    SORT_OPTIONS.find(
+      (o) => o.value === currentSort && o.reverse === currentReverse,
+    )?.label ?? 'Featured';
 
   return (
     <div className="collection">
@@ -106,45 +128,81 @@ export default function Collection() {
             <div className="collection-header__overlay" />
           </>
         )}
-        <div className="collection-header__content">
-          <h1 className="collection-header__title">{collection.title}</h1>
-          {collection.description && (
-            <p className="collection-header__desc">{collection.description}</p>
-          )}
+        <div className="collection-header__content collection-header__content--bottom-left">
+          <h1 className="collection-header__title collection-header__title--sm">{collection.title}</h1>
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="collection-toolbar">
-        <span className="collection-toolbar__count">
-          {productCount} {productCount === 1 ? 'Product' : 'Products'}
+      {/* ── Sticky Controls Bar ── */}
+      <div className="collection-controls">
+        <span className="collection-controls__count">
+          {productCount} {productCount === 1 ? 'item' : 'items'}
         </span>
-        <div className="collection-toolbar__actions">
-          <div style={{position: 'relative'}}>
+
+        <div className="collection-controls__right">
+          {/* Availability filter pills */}
+          <div className="collection-filter-group" role="group" aria-label="Filter by availability">
             <button
-              className="collection-toolbar__sort-btn"
+              className={`collection-filter-pill${
+                !availableFilter ? ' collection-filter-pill--active' : ''
+              }`}
+              onClick={() => handleAvailability(false)}
+            >
+              All
+            </button>
+            <button
+              className={`collection-filter-pill${
+                availableFilter ? ' collection-filter-pill--active' : ''
+              }`}
+              onClick={() => handleAvailability(true)}
+            >
+              In Stock
+            </button>
+          </div>
+
+          {/* Sort dropdown */}
+          <div className="collection-controls__sort" style={{position: 'relative'}}>
+            <button
+              className="collection-controls__sort-btn"
               onClick={() => setSortOpen(!sortOpen)}
               aria-expanded={sortOpen}
               aria-haspopup="listbox"
             >
-              Sort
-              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{marginLeft: '6px'}}>
-                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <span className="collection-controls__sort-label">Sort:</span>
+              {currentSortLabel}
+              <svg
+                width="10"
+                height="6"
+                viewBox="0 0 10 6"
+                fill="none"
+                style={{marginLeft: '5px', transition: 'transform 0.2s', transform: sortOpen ? 'rotate(180deg)' : 'none'}}
+              >
+                <path
+                  d="M1 1L5 5L9 1"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
             {sortOpen && (
-              <ul className="collection-toolbar__sort-dropdown" role="listbox">
+              <ul className="collection-controls__sort-dropdown" role="listbox">
                 {SORT_OPTIONS.map((opt) => {
-                  const isActive = opt.value === currentSort && opt.reverse === currentReverse;
+                  const isActive =
+                    opt.value === currentSort &&
+                    opt.reverse === currentReverse;
                   return (
                     <li key={opt.label} role="option" aria-selected={isActive}>
                       <button
                         onClick={() => handleSort(opt.value, opt.reverse)}
-                        style={{
-                          fontWeight: isActive ? 700 : 400,
-                          opacity: isActive ? 1 : 0.7,
-                        }}
+                        className={isActive ? 'is-active' : ''}
                       >
+                        {isActive && (
+                          <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style={{marginRight: '6px'}}>
+                            <path d="M1 4L3 6L7 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
                         {opt.label}
                       </button>
                     </li>
@@ -156,26 +214,26 @@ export default function Collection() {
         </div>
       </div>
 
-      {/* Product Grid */}
-      <PaginatedResourceSection<ProductItemFragment>
-        connection={collection.products}
-        resourcesClassName="products-grid"
-      >
-        {({node: product, index}) => (
-          <ProductItem
-            key={product.id}
-            product={product}
-            loading={index < 8 ? 'eager' : undefined}
-          />
-        )}
-      </PaginatedResourceSection>
+      {/* ── Product Grid ── */}
+      <div className="collection-products">
+        <PaginatedResourceSection<ProductItemFragment>
+          connection={collection.products}
+          resourcesClassName="products-grid"
+        >
+          {({node: product, index}) => (
+            <ProductItem
+              key={product.id}
+              product={product}
+              loading={index < 8 ? 'eager' : undefined}
+            />
+          )}
+        </PaginatedResourceSection>
+      </div>
 
       {/* Sparse collection prompt */}
       {productCount <= 2 && (
         <div className="collection-sparse">
-          <p className="collection-sparse__text">
-            More styles coming soon.
-          </p>
+          <p className="collection-sparse__text">More styles coming soon.</p>
           <Link to="/collections" className="collection-sparse__link">
             Explore All Collections
           </Link>
@@ -203,6 +261,7 @@ const PRODUCT_ITEM_FRAGMENT = `#graphql
     id
     handle
     title
+    availableForSale
     featuredImage {
       id
       altText
@@ -233,6 +292,7 @@ const COLLECTION_QUERY = `#graphql
     $endCursor: String
     $sortKey: ProductCollectionSortKeys
     $reverse: Boolean
+    $filters: [ProductFilter!]
   ) @inContext(country: $country, language: $language) {
     collection(handle: $handle) {
       id
@@ -252,7 +312,8 @@ const COLLECTION_QUERY = `#graphql
         before: $startCursor,
         after: $endCursor,
         sortKey: $sortKey,
-        reverse: $reverse
+        reverse: $reverse,
+        filters: $filters
       ) {
         nodes {
           ...ProductItem

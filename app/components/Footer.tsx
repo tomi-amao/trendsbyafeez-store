@@ -29,8 +29,8 @@ export function Footer({
                     lineHeight: 1.6,
                   }}
                 >
-                  Curated fashion for the modern individual. Quality
-                  craftsmanship meets contemporary design.
+                  IF YOU SAW ME I WAS NEVER THERE
+                  
                 </p>
                 <div className="footer__newsletter-form">
                   <input

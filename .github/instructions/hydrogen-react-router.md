@@ -46,7 +46,10 @@ import { useLoaderData, Link, Form, useActionData, useNavigation, useSubmit } fr
 1. Always check existing code in the project to understand which specific React Router hooks and components are being used
 2. When generating new code or modifying existing code, ensure all routing-related imports come from the correct React Router packages
 3. If following documentation or examples based on Remix, adapt the code to use React Router equivalents
+4. Use the shopify mcp tool when relevant and possible, always check if the shopify-dev-mcp tool can be used in the request
+
 
 When working in this codebase, always follow the React Router patterns that are already established in the existing code.
 
 For more information, consult the official Remix to React Router upgrade guide: https://reactrouter.com/upgrading/remix
+
