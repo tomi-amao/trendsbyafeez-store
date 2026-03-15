@@ -86,37 +86,52 @@ export function ProductItem({
   return (
     <>
       <div className={`product-card-wrapper${!available ? ' product-card-wrapper--sold-out' : ''}`}>
-        <Link className="product-card" prefetch="intent" to={variantUrl}>
-          <div className="product-card__image">
-            {image && (
-              <Image
-                alt={image.altText || product.title}
-                aspectRatio="3/4"
-                data={image}
-                loading={loading}
-                sizes="(min-width: 768px) 25vw, 50vw"
-              />
-            )}
-            {!available && (
-              <div className="product-card__sold-out-badge" aria-label="Sold out">
-                <span>Sold Out</span>
-              </div>
-            )}
-          </div>
-          <div className="product-card__info">
-            <h4 className="product-card__title">{product.title}</h4>
-            <span className="product-card__price">
-              <Money data={product.priceRange.minVariantPrice} />
-            </span>
-          </div>
+        {/* Image area with overlaid controls */}
+        <div className="product-card__fig">
+          <Link className="product-card" prefetch="intent" to={variantUrl} tabIndex={-1} aria-hidden="true">
+            <div className="product-card__image">
+              {image && (
+                <Image
+                  alt={image.altText || product.title}
+                  aspectRatio="3/4"
+                  data={image}
+                  loading={loading}
+                  sizes="(min-width: 768px) 25vw, 50vw"
+                />
+              )}
+              {!available && (
+                <div className="product-card__sold-out-badge" aria-label="Sold out">
+                  <span>Sold Out</span>
+                </div>
+              )}
+            </div>
+          </Link>
+          {/* Quick View — desktop hover */}
+          <button
+            className="product-card__quickview"
+            onClick={openQuickView}
+            aria-label={`Quick view ${product.title}`}
+          >
+            Quick View
+          </button>
+          {/* Add button — mobile only */}
+          <button
+            className="product-card__mobile-add"
+            onClick={openQuickView}
+            aria-label={`Quick view ${product.title}`}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+        {/* Product info — separate focusable link */}
+        <Link className="product-card__info" prefetch="intent" to={variantUrl}>
+          <h4 className="product-card__title">{product.title}</h4>
+          <span className="product-card__price">
+            <Money data={product.priceRange.minVariantPrice} />
+          </span>
         </Link>
-        <button
-          className="product-card__quickview"
-          onClick={openQuickView}
-          aria-label={`Quick view ${product.title}`}
-        >
-          Quick View
-        </button>
       </div>
 
       {quickViewOpen && typeof document !== 'undefined' &&
@@ -326,7 +341,6 @@ function QuickViewPanel({
                       type="submit"
                       className="quickview-panel__add-to-cart"
                       disabled={!isVariantAvailable || cartFetcher.state !== 'idle'}
-                      onClick={onClose}
                     >
                       {isVariantAvailable ? 'Add to Bag' : 'Sold Out'}
                     </button>
