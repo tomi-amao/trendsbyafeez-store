@@ -1,4 +1,4 @@
-import {Suspense, useEffect, useState} from 'react';
+import {Suspense, useEffect, useState, useRef} from 'react';
 import {Await, NavLink, useAsyncValue, useLocation} from 'react-router';
 import {
   type CartViewPayload,
@@ -15,6 +15,36 @@ interface HeaderProps {
   publicStoreDomain: string;
 }
 
+// Timezone config: [label, IANA timezone]
+const TIMEZONES = [
+  ['Paris', 'Europe/Paris'],
+  ['Johannesburg', 'Africa/Johannesburg'],
+  ['Dubai', 'Asia/Dubai'],
+  ['London', 'Europe/London'],
+  ['Tokyo', 'Asia/Tokyo'],
+] as const;
+
+function useTimezoneClocks() {
+  const [times, setTimes] = useState<string[]>([]);
+
+  useEffect(() => {
+    const formatTime = () =>
+      TIMEZONES.map(([, tz]) =>
+        new Intl.DateTimeFormat('en-GB', {
+          timeZone: tz,
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }).format(new Date()),
+      );
+    setTimes(formatTime());
+    const id = setInterval(() => setTimes(formatTime()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  return times;
+}
+
 export function Header({
   header,
   isLoggedIn,
@@ -23,17 +53,55 @@ export function Header({
 }: HeaderProps) {
   const {shop, menu} = header;
   const location = useLocation();
-  const isHome = location.pathname === '/' || Boolean(location.pathname.match(/^\/[a-z]{2}-[a-z]{2}\/?$/i));
-  const [scrolled, setScrolled] = useState(false);
+  const isHome =
+    location.pathname === '/' ||
+    Boolean(location.pathname.match(/^\/[a-z]{2}-[a-z]{2}\/?$/i));
+
+  // Smart scroll: transparent on home at top; hidden when scrolling down; solid when scrolling up
+  const [headerState, setHeaderState] = useState<'top' | 'solid' | 'hidden'>('top');
+  const lastScrollY = useRef(0);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
+    const ANNOUNCEMENT_H = 36; // matches --announcement-height in CSS
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      const delta = currentY - lastScrollY.current;
+      lastScrollY.current = currentY;
+
+      // Slide header up to top:0 as announcement bar scrolls away
+      const newTop = Math.max(0, ANNOUNCEMENT_H - currentY);
+      document.documentElement.style.setProperty('--header-top', `${newTop}px`);
+
+      if (currentY < 80) {
+        setHeaderState('top');
+      } else if (delta > 4) {
+        // Scrolling down
+        setHeaderState('hidden');
+      } else if (delta < -4) {
+        // Scrolling up
+        setHeaderState('solid');
+      }
+    };
     window.addEventListener('scroll', handleScroll, {passive: true});
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const headerClass = `header ${isHome && !scrolled?'header--transparent':'header--solid'}`;
+  // Expose header state for CSS-driven sticky adjustments
+  useEffect(() => {
+    document.documentElement.dataset.headerState = headerState;
+    return () => {
+      delete document.documentElement.dataset.headerState;
+    };
+  }, [headerState]);
+
+  const headerClass = [
+    'header',
+    isHome && headerState === 'top' ? 'header--transparent' : 'header--solid',
+    headerState === 'hidden' ? 'header--hidden' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <>
@@ -41,7 +109,11 @@ export function Header({
       <header className={headerClass}>
         <div className="header__left">
           <MobileMenuToggle />
-          <DesktopNav menu={menu} primaryDomainUrl={shop.primaryDomain.url} publicStoreDomain={publicStoreDomain} />
+          <DesktopNav
+            menu={menu}
+            primaryDomainUrl={shop.primaryDomain.url}
+            publicStoreDomain={publicStoreDomain}
+          />
         </div>
         <div className="header__center">
           <NavLink prefetch="intent" to="/" end>
@@ -58,31 +130,127 @@ export function Header({
 }
 
 function AnnouncementBar() {
+  const times = useTimezoneClocks();
+
+  const items = TIMEZONES.map(([label], i) => (
+    <span className="announcement-bar__item" key={label}>
+      <span className="announcement-bar__dot" aria-hidden="true" />
+      <span className="announcement-bar__city">{label}</span>
+      <span className="announcement-bar__sep" aria-hidden="true" />
+      <span className="announcement-bar__time">{times[i] ?? '--:--'}</span>
+    </span>
+  ));
+
   return (
     <div className="announcement-bar">
       <div className="announcement-bar__track">
-        {[...Array(6)].map((_, i) => (
-          <span className="announcement-bar__item" key={i}>
-            <span>Free shipping on orders over $300</span>
-            <span>&middot;</span>
-            <NavLink to="/collections" prefetch="intent">Shop New Arrivals</NavLink>
-            <span>&middot;</span>
-            <span>New collection available now</span>
-            <span>&middot;</span>
-          </span>
-        ))}
+        {/* Duplicate for seamless loop */}
+        {items}
+        {items}
       </div>
     </div>
   );
 }
 
-function DesktopNav({menu, primaryDomainUrl, publicStoreDomain}: {menu: HeaderProps['header']['menu']; primaryDomainUrl: string; publicStoreDomain: string}) {
+function DesktopNav({
+  menu,
+  primaryDomainUrl,
+  publicStoreDomain,
+}: {
+  menu: HeaderProps['header']['menu'];
+  primaryDomainUrl: string;
+  publicStoreDomain: string;
+}) {
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const navRef = useRef<HTMLElement>(null);
+
+  // Close submenu on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) {
+        setOpenSubmenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const resolveUrl = (url: string) =>
+    url.includes('myshopify.com') ||
+    url.includes(publicStoreDomain) ||
+    url.includes(primaryDomainUrl)
+      ? new URL(url).pathname
+      : url;
+
   return (
-    <nav className="header__nav">
+    <nav className="header__nav" ref={navRef}>
       {(menu || FALLBACK_HEADER_MENU).items.map((item) => {
         if (!item.url) return null;
-        const url = item.url.includes('myshopify.com') || item.url.includes(publicStoreDomain) || item.url.includes(primaryDomainUrl) ? new URL(item.url).pathname : item.url;
-        return (<NavLink className="header__nav-link" key={item.id} prefetch="intent" to={url} end>{item.title}</NavLink>);
+        const url = resolveUrl(item.url);
+        const hasSubmenu = item.items && item.items.length > 0;
+        const isOpen = openSubmenu === item.id;
+
+        if (hasSubmenu) {
+          return (
+            <div
+              key={item.id}
+              className={`header__nav-item header__nav-item--has-submenu${isOpen ? ' header__nav-item--open' : ''}`}
+            >
+              <button
+                className="header__nav-link header__nav-link--btn"
+                onClick={() => setOpenSubmenu(isOpen ? null : item.id)}
+                aria-expanded={isOpen}
+                aria-haspopup="true"
+              >
+                {item.title}
+                <svg width="8" height="5" viewBox="0 0 8 5" fill="none" style={{marginLeft: '4px', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none'}}>
+                  <path d="M1 1L4 4L7 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {isOpen && (
+                <div className="header__submenu" role="menu">
+                  <NavLink
+                    className="header__submenu-link"
+                    to={url}
+                    prefetch="intent"
+                    onClick={() => setOpenSubmenu(null)}
+                    role="menuitem"
+                  >
+                    All {item.title}
+                  </NavLink>
+                  {item.items!.map((sub) => {
+                    if (!sub.url) return null;
+                    const subUrl = resolveUrl(sub.url);
+                    return (
+                      <NavLink
+                        key={sub.id}
+                        className="header__submenu-link"
+                        to={subUrl}
+                        prefetch="intent"
+                        onClick={() => setOpenSubmenu(null)}
+                        role="menuitem"
+                      >
+                        {sub.title}
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <NavLink
+            className="header__nav-link"
+            key={item.id}
+            prefetch="intent"
+            to={url}
+            end
+          >
+            {item.title}
+          </NavLink>
+        );
       })}
     </nav>
   );
@@ -127,18 +295,105 @@ function CartBanner() {
   return <CartBadge count={cart?.totalQuantity ?? 0} />;
 }
 
-export function HeaderMenu({menu, primaryDomainUrl, viewport, publicStoreDomain}: {menu: HeaderProps['header']['menu']; primaryDomainUrl: string; viewport: 'desktop' | 'mobile'; publicStoreDomain: string}) {
+export function HeaderMenu({
+  menu,
+  primaryDomainUrl,
+  viewport,
+  publicStoreDomain,
+}: {
+  menu: HeaderProps['header']['menu'];
+  primaryDomainUrl: string;
+  viewport: 'desktop' | 'mobile';
+  publicStoreDomain: string;
+}) {
   const {close} = useAside();
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+
+  const resolveUrl = (url: string) =>
+    url.includes('myshopify.com') ||
+    url.includes(publicStoreDomain) ||
+    url.includes(primaryDomainUrl)
+      ? new URL(url).pathname
+      : url;
+
   if (viewport === 'mobile') {
+    const items = (menu || FALLBACK_HEADER_MENU).items;
+    const hasHomeLink = items.some(
+      (item) => item.url && resolveUrl(item.url) === '/',
+    );
+
     return (
       <nav className="header-menu-mobile" role="navigation">
-        <NavLink end onClick={close} prefetch="intent" to="/">Home</NavLink>
-        {(menu || FALLBACK_HEADER_MENU).items.map((item) => {
+        {!hasHomeLink && (
+          <NavLink end onClick={close} prefetch="intent" to="/">
+            Home
+          </NavLink>
+        )}
+        {items.map((item) => {
           if (!item.url) return null;
-          const url = item.url.includes('myshopify.com') || item.url.includes(publicStoreDomain) || item.url.includes(primaryDomainUrl) ? new URL(item.url).pathname : item.url;
-          return (<NavLink key={item.id} end onClick={close} prefetch="intent" to={url}>{item.title}</NavLink>);
+          const url = resolveUrl(item.url);
+          const hasSubmenu = item.items && item.items.length > 0;
+          const isOpen = openSubmenu === item.id;
+
+          if (hasSubmenu) {
+            return (
+              <div key={item.id} className="mobile-menu-item">
+                <button
+                  className="mobile-menu-item__toggle"
+                  onClick={() => setOpenSubmenu(isOpen ? null : item.id)}
+                  aria-expanded={isOpen}
+                >
+                  {item.title}
+                  <svg
+                    width="10"
+                    height="6"
+                    viewBox="0 0 10 6"
+                    fill="none"
+                    style={{transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none'}}
+                  >
+                    <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+                {isOpen && (
+                  <div className="mobile-submenu">
+                    <NavLink
+                      to={url}
+                      prefetch="intent"
+                      onClick={close}
+                      className="mobile-submenu__link mobile-submenu__link--all"
+                    >
+                      All {item.title}
+                    </NavLink>
+                    {item.items!.map((sub) => {
+                      if (!sub.url) return null;
+                      const subUrl = resolveUrl(sub.url);
+                      return (
+                        <NavLink
+                          key={sub.id}
+                          to={subUrl}
+                          prefetch="intent"
+                          onClick={close}
+                          className="mobile-submenu__link"
+                        >
+                          {sub.title}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <NavLink key={item.id} end onClick={close} prefetch="intent" to={url}>
+              {item.title}
+            </NavLink>
+          );
         })}
-        <NavLink end onClick={close} prefetch="intent" to="/account">Account</NavLink>
+        <NavLink end onClick={close} prefetch="intent" to="/account">
+          Account
+        </NavLink>
       </nav>
     );
   }

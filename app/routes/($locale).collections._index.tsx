@@ -46,14 +46,12 @@ export default function Collections() {
   const {collections} = useLoaderData<typeof loader>();
 
   return (
-    <div className="collection" style={{paddingTop: 'calc(var(--header-height) + var(--announcement-height) + 2rem)'}}>
-      <div style={{padding: '0 clamp(1rem, 3vw, 2.5rem) 2rem'}}>
-        <h1 style={{
-          fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
-          fontWeight: 300,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-        }}>Collections</h1>
+    <div className="collection">
+      {/* Hero-style header */}
+      <div className="collection-page-header">
+        <p className="collection-page-header__eyebrow">Browse</p>
+        <h1 className="collection-page-header__title">Collections</h1>
+        <div className="collection-page-header__rule" />
       </div>
       <PaginatedResourceSection<CollectionFragment>
         connection={collections}
@@ -95,7 +93,17 @@ function CollectionItem({
         />
       )}
       <div className="collection-showcase__overlay" />
-      <span className="collection-showcase__label">{collection.title}</span>
+      <div className="collection-showcase__content">
+        <span className="collection-showcase__label">{collection.title}</span>
+        {collection.description && (
+          <p className="collection-showcase__desc">
+            {collection.description.length > 80
+              ? collection.description.slice(0, 80) + '\u2026'
+              : collection.description}
+          </p>
+        )}
+        <span className="collection-showcase__cta">Shop Now</span>
+      </div>
     </Link>
   );
 }
@@ -105,6 +113,7 @@ const COLLECTIONS_QUERY = `#graphql
     id
     title
     handle
+    description
     image {
       id
       url

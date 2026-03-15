@@ -1,6 +1,6 @@
 import {redirect, useLoaderData, Await, Link} from 'react-router';
 import type {Route} from './+types/products.$handle';
-import {Suspense, useState} from 'react';
+import {Suspense, useState, useRef, useCallback} from 'react';
 import {
   getSelectedProductOptions,
   Analytics,
@@ -84,7 +84,19 @@ export default function Product() {
   // Collect all images for gallery
   const images = product.images?.nodes || [];
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const selectedImage = images[selectedImageIndex] || selectedVariant?.image;
+  const snapRef = useRef<HTMLDivElement>(null);
+
+  const scrollToImage = useCallback((idx: number) => {
+    setSelectedImageIndex(idx);
+    snapRef.current?.scrollTo({left: idx * (snapRef.current.clientWidth || 0), behavior: 'smooth'});
+  }, []);
+
+  const handleSnapScroll = useCallback(() => {
+    const el = snapRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    setSelectedImageIndex(idx);
+  }, []);
 
   // Horizontal tabs state (denimtears style)
   const [activeTab, setActiveTab] = useState<'details' | 'shipping' | 'returns'>('details');
@@ -95,21 +107,47 @@ export default function Product() {
   return (
     <>
       <div className="product">
-        {/* Image Gallery - vertical scroll on desktop */}
+        {/* Image Gallery - vertical scroll on desktop, swipe snap on mobile */}
         <div className="product-gallery">
-          {/* Mobile: single main image + thumb strip */}
-          <div className="product-gallery__main">
-            {selectedImage && (
-              <Image
-                alt={selectedImage.altText || title}
-                data={selectedImage}
-                key={selectedImage.id}
-                sizes="(min-width: 768px) 55vw, 100vw"
-                className="product-gallery__image"
-                loading="eager"
-              />
-            )}
+          {/* Mobile: horizontal swipe/scroll-snap gallery */}
+          <div
+            className="product-gallery__mobile-snap"
+            ref={snapRef}
+            onScroll={handleSnapScroll}
+          >
+            {(images.length > 0 ? images : selectedVariant?.image ? [selectedVariant.image] : []).map((img, idx) => (
+              <div key={img.id || idx} className="product-gallery__mobile-snap-item">
+                <Image
+                  alt={img.altText || `${title} ${idx + 1}`}
+                  data={img}
+                  sizes="100vw"
+                  loading={idx === 0 ? 'eager' : 'lazy'}
+                />
+              </div>
+            ))}
           </div>
+
+          {/* Mobile: thumbnail strip — synced with snap gallery */}
+          {images.length > 1 && (
+            <div className="product-gallery__thumbs">
+              {images.map((img, idx) => (
+                <button
+                  key={img.id || idx}
+                  onClick={() => scrollToImage(idx)}
+                  className={`product-gallery__thumb${
+                    idx === selectedImageIndex ? ' product-gallery__thumb--active' : ''
+                  }`}
+                  aria-label={`View image ${idx + 1}`}
+                >
+                  <Image
+                    alt={img.altText || `${title} ${idx + 1}`}
+                    data={img}
+                    sizes="80px"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Desktop: scrollable image column — always rendered, falls back to variant image */}
           <div className="product-gallery__scroll">
@@ -128,28 +166,6 @@ export default function Product() {
               </div>
             ))}
           </div>
-
-          {/* Mobile thumbs */}
-          {images.length > 1 && (
-            <div className="product-gallery__thumbs">
-              {images.map((img, idx) => (
-                <button
-                  key={img.id}
-                  onClick={() => setSelectedImageIndex(idx)}
-                  className={`product-gallery__thumb ${
-                    idx === selectedImageIndex ? 'product-gallery__thumb--active' : ''
-                  }`}
-                  aria-label={`View image ${idx + 1}`}
-                >
-                  <Image
-                    alt={img.altText || `${title} ${idx + 1}`}
-                    data={img}
-                    sizes="80px"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Product Info Sidebar */}
@@ -286,12 +302,14 @@ export default function Product() {
                 <div className="homepage-section__header">
                   <h2 className="homepage-section__title">You May Also Like</h2>
                 </div>
-                <div className="products-grid">
+                <div className="products-carousel">
                   {response.products.nodes
                     .filter((p) => p.id !== product.id)
                     .slice(0, 4)
                     .map((p) => (
-                      <ProductItem key={p.id} product={p} />
+                      <div key={p.id} className="products-carousel__item">
+                        <ProductItem product={p} />
+                      </div>
                     ))}
                 </div>
               </section>
@@ -410,6 +428,7 @@ const RECOMMENDED_PRODUCTS_QUERY = `#graphql
     id
     title
     handle
+    availableForSale
     priceRange {
       minVariantPrice {
         amount
