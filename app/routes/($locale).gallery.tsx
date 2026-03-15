@@ -3,18 +3,12 @@
  *
  * Fetches files uploaded to Shopify (Admin API) whose filenames start with
  * TRENDSBYFACES_<Name>_<Initial>  and groups them by the parsed name.
- *
- * Required environment variable:
- *   SHOPIFY_ADMIN_API_ACCESS_TOKEN  — a Custom App or Private App token with
- *                                     read_files scope.
- *   PUBLIC_STORE_DOMAIN             — e.g. your-store.myshopify.com
- *
- * If the token is not configured the page renders a "coming soon" placeholder.
+ * Also fetches the TRENDSBYFACES_FEATURE video for the hero.
  */
 import type {Route} from './+types/gallery';
 import React, {useState, useCallback, useEffect, useRef} from 'react';
-import {useLoaderData} from 'react-router';
-import {getAdminAccessToken, fetchAdminFiles} from '~/utils/shopify-admin.server';
+import {useLoaderData, Link} from 'react-router';
+import {getAdminAccessToken, fetchAdminFiles, fetchAdminVideoByFilename} from '~/utils/shopify-admin.server';
 
 export const meta: Route.MetaFunction = () => [
   {title: 'TrendsByAfeez | Gallery'},
@@ -112,7 +106,7 @@ export async function loader({context}: Route.LoaderArgs) {
 
   if (!clientId || !clientSecret || !storeDomain) {
     if (debugMode) console.warn('[Gallery] Missing SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET, or PUBLIC_STORE_DOMAIN — rendering unconfigured state');
-    return {groups: [] as ShootGroup[], configured: false, debug, debugMode};
+    return {groups: [] as ShootGroup[], configured: false, debug, debugMode, videoUrl: null as string | null};
   }
 
   let adminToken: string;
@@ -123,7 +117,7 @@ export async function loader({context}: Route.LoaderArgs) {
     debug.errorMessage = String(err);
     debug.tokenFetchStatus = 0;
     console.error('[Gallery] Failed to obtain admin token:', err);
-    return {groups: [] as ShootGroup[], configured: true, debug, debugMode};
+    return {groups: [] as ShootGroup[], configured: true, debug, debugMode, videoUrl: null as string | null};
   }
 
   try {
@@ -164,11 +158,21 @@ export async function loader({context}: Route.LoaderArgs) {
     debug.groupKeys = groups.map((g) => `${g.name}_${g.initial} (${g.images.length} imgs)`);
     if (debugMode) console.log('[Gallery] Groups formed:', debug.groupKeys);
 
-    return {groups, configured: true, debug, debugMode};
+    // Fetch feature video separately (non-blocking — returns null on failure)
+    let videoUrl: string | null = null;
+    try {
+      const video = await fetchAdminVideoByFilename(storeDomain, adminToken, 'TRENDSBYFACES_FEATURE');
+      const mp4 = video?.sources.find((s) => s.format === 'mp4' || s.mimeType === 'video/mp4');
+      videoUrl = mp4?.url ?? video?.sources[0]?.url ?? null;
+    } catch {
+      // Video is optional — fail silently
+    }
+
+    return {groups, configured: true, debug, debugMode, videoUrl};
   } catch (err) {
     debug.errorMessage = String(err);
     console.error('[Gallery] loader error:', err);
-    return {groups: [] as ShootGroup[], configured: true, debug, debugMode};
+    return {groups: [] as ShootGroup[], configured: true, debug, debugMode, videoUrl: null as string | null};
   }
 }
 
@@ -219,11 +223,9 @@ function getItemSpan(idx: number): React.CSSProperties {
 
 /* ─── Component ──────────────────────────────────────────────────── */
 export default function GalleryPage() {
-  const {groups, configured, debug, debugMode} = useLoaderData<typeof loader>();
-  const [activeIdx, setActiveIdx] = useState(0);
+  const {groups, configured, debug, debugMode, videoUrl} = useLoaderData<typeof loader>();
   const [lightbox, setLightbox] = useState<{groupIdx: number; imgIdx: number} | null>(null);
   const touchStartX = useRef(0);
-  const sectionRefs = useRef<(HTMLElement | null)[]>([]);
 
   const lbGroup = lightbox != null ? groups[lightbox.groupIdx] : null;
   const lbImg = lbGroup ? lbGroup.images[lightbox!.imgIdx] : null;
@@ -269,7 +271,7 @@ export default function GalleryPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [lightbox, closeLightbox, lbNext, lbPrev]);
 
-  /* ── scroll-reveal via IntersectionObserver ───────────────────── */
+  /* ── scroll-reveal ────────────────────────────────────────────── */
   useEffect(() => {
     const items = document.querySelectorAll<HTMLElement>('.gallery-item');
     if (!items.length) return;
@@ -286,17 +288,6 @@ export default function GalleryPage() {
     return () => io.disconnect();
   }, [groups]);
 
-  /* ── tab / section scroll ─────────────────────────────────────── */
-  const scrollToShoot = useCallback((idx: number) => {
-    setActiveIdx(idx);
-    const el = sectionRefs.current[idx];
-    if (el) {
-      const offset = 64 + 36 + 52; // header + announcement + tabs
-      const top = el.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({top, behavior: 'smooth'});
-    }
-  }, []);
-
   /* ── touch swipe in lightbox ──────────────────────────────────── */
   const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const onTouchEnd   = (e: React.TouchEvent) => {
@@ -310,9 +301,13 @@ export default function GalleryPage() {
       <>
         {debugMode && <DebugPanel debug={debug} />}
         <div className="gallery-page">
+          <div className="gallery-video-hero gallery-video-hero--empty">
+            <div className="gallery-video-hero__content">
+              <p className="gallery-video-hero__eyebrow">Behind the Lens</p>
+              <h1 className="gallery-video-hero__title">Gallery</h1>
+            </div>
+          </div>
           <div className="gallery-coming-soon">
-            <p className="gallery-coming-soon__eyebrow">Behind the Lens</p>
-            <h1 className="gallery-coming-soon__title">Gallery</h1>
             <p className="gallery-coming-soon__sub">Editorial shoots — coming soon.</p>
           </div>
         </div>
@@ -320,91 +315,136 @@ export default function GalleryPage() {
     );
   }
 
+  const featuredGroup = groups[0];
+  const otherGroups = groups.slice(1);
   const totalPhotos = groups.reduce((t, g) => t + g.images.length, 0);
+  const FEATURED_PREVIEW = 8; // images shown in featured section before "View all" link
 
   return (
     <>
       {debugMode && <DebugPanel debug={debug} />}
       <div className="gallery-page">
 
-        {/* ── Hero ───────────────────────────────────────────────── */}
-        <div className="gallery-hero">
-          <p className="gallery-hero__eyebrow">Behind the Lens</p>
-          <h1 className="gallery-hero__title">
-            <span className="gallery-hero__title-inner">Gallery</span>
-          </h1>
-          <p className="gallery-hero__meta">
-            {groups.length} Shoot{groups.length > 1 ? 's' : ''}&ensp;&middot;&ensp;{totalPhotos} Photos
-          </p>
-          <div className="gallery-hero__scroll-cue" aria-hidden="true">
-            <span>Scroll</span>
-            <svg width="1" height="32" viewBox="0 0 1 32" fill="none">
-              <line x1="0.5" y1="0" x2="0.5" y2="32" stroke="rgba(0,0,0,0.2)" strokeWidth="1"/>
-            </svg>
+        {/* ── Video Hero ────────────────────────────────────────── */}
+        <div className="gallery-video-hero">
+          {videoUrl ? (
+            <video
+              className="gallery-video-hero__video"
+              autoPlay
+              muted
+              loop
+              playsInline
+            >
+              <source src={videoUrl} type="video/mp4" />
+            </video>
+          ) : (
+            <div className="gallery-video-hero__placeholder" />
+          )}
+          <div className="gallery-video-hero__overlay" />
+          <div className="gallery-video-hero__content">
+            <p className="gallery-video-hero__eyebrow">Behind the Lens</p>
+            <h1 className="gallery-video-hero__title">Gallery</h1>
+            <p className="gallery-video-hero__meta">
+              {groups.length} Shoot{groups.length > 1 ? 's' : ''}&ensp;&middot;&ensp;{totalPhotos} Photos
+            </p>
           </div>
         </div>
 
-        {/* ── Shoot tabs ─────────────────────────────────────────── */}
-        <nav className="gallery-tabs" aria-label="Shoots">
-          {groups.map((g, i) => (
-            <button
-              key={`${g.name}_${g.initial}`}
-              className={`gallery-tab${activeIdx === i ? ' gallery-tab--active' : ''}`}
-              onClick={() => scrollToShoot(i)}
-              aria-current={activeIdx === i ? 'true' : undefined}
-            >
-              {g.name}
-              <span className="gallery-tab__count">{g.images.length}</span>
-            </button>
-          ))}
-        </nav>
-
-        {/* ── Shoot sections ─────────────────────────────────────── */}
-        {groups.map((group, groupIdx) => (
-          <section
-            key={`${group.name}_${group.initial}`}
-            id={`shoot-${groupIdx}`}
-            ref={el => { sectionRefs.current[groupIdx] = el; }}
-            className="gallery-section"
-          >
-            <div className="gallery-section__header">
-              <div className="gallery-section__label">
-                <span className="gallery-section__num">{String(groupIdx + 1).padStart(2, '0')}</span>
-                <h2 className="gallery-section__name">{group.name}</h2>
-              </div>
-              <span className="gallery-section__count">{group.images.length} Photos</span>
+        {/* ── Featured Collection ───────────────────────────────── */}
+        <section className="gallery-featured">
+          <div className="gallery-featured__header">
+            <div className="gallery-featured__label">
+              <span className="gallery-featured__eyebrow">Featured</span>
+              <h2 className="gallery-featured__name">{featuredGroup.name}</h2>
             </div>
+            <Link
+              to={`/gallery/${featuredGroup.name.toLowerCase()}`}
+              className="gallery-featured__view-all"
+              prefetch="intent"
+            >
+              View all {featuredGroup.images.length} photos
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                <path d="M2 5H8M5 2L8 5L5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
+          </div>
+          <div className="gallery-grid">
+            {featuredGroup.images.slice(0, FEATURED_PREVIEW).map((img, imgIdx) => (
+              <button
+                key={img.id}
+                className="gallery-item"
+                style={getItemSpan(imgIdx)}
+                onClick={() => openLightbox(0, imgIdx)}
+                aria-label={`Open ${featuredGroup.name} photo ${imgIdx + 1}`}
+              >
+                <img
+                  src={img.url}
+                  alt={img.alt || `${featuredGroup.name} ${imgIdx + 1}`}
+                  loading={imgIdx < 4 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  className="gallery-item__img"
+                />
+                <div className="gallery-item__overlay" aria-hidden="true">
+                  <svg className="gallery-item__icon" width="22" height="22" viewBox="0 0 22 22" fill="none">
+                    <rect x="0.75" y="0.75" width="20.5" height="20.5" rx="1.25" stroke="white" strokeWidth="1.5"/>
+                    <path d="M7 11h8M11 7v8" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </div>
+              </button>
+            ))}
+          </div>
+          {featuredGroup.images.length > FEATURED_PREVIEW && (
+            <div className="gallery-featured__footer">
+              <Link
+                to={`/gallery/${featuredGroup.name.toLowerCase()}`}
+                className="gallery-featured__cta"
+                prefetch="intent"
+              >
+                View all {featuredGroup.images.length} photos
+              </Link>
+            </div>
+          )}
+        </section>
 
-            <div className="gallery-grid">
-              {group.images.map((img, imgIdx) => (
-                <button
-                  key={img.id}
-                  className="gallery-item"
-                  style={getItemSpan(imgIdx)}
-                  onClick={() => openLightbox(groupIdx, imgIdx)}
-                  aria-label={`Open ${group.name} photo ${imgIdx + 1}`}
-                >
-                  <img
-                    src={img.url}
-                    alt={img.alt || `${group.name} ${imgIdx + 1}`}
-                    loading={imgIdx < 4 ? 'eager' : 'lazy'}
-                    decoding="async"
-                    className="gallery-item__img"
-                  />
-                  <div className="gallery-item__overlay" aria-hidden="true">
-                    <svg className="gallery-item__icon" width="22" height="22" viewBox="0 0 22 22" fill="none">
-                      <rect x="0.75" y="0.75" width="20.5" height="20.5" rx="1.25" stroke="white" strokeWidth="1.5"/>
-                      <path d="M7 11h8M11 7v8" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                    </svg>
-                  </div>
-                </button>
-              ))}
+        {/* ── Explore Other Collections ─────────────────────────── */}
+        {otherGroups.length > 0 && (
+          <section className="gallery-explore">
+            <div className="gallery-explore__header">
+              <h2 className="gallery-explore__title">Explore Collections</h2>
+            </div>
+            <div className="gallery-explore__grid">
+              {otherGroups.map((group) => {
+                const thumb = group.images[0];
+                const slug = group.name.toLowerCase();
+                return (
+                  <Link
+                    key={`${group.name}_${group.initial}`}
+                    to={`/gallery/${slug}`}
+                    className="gallery-explore__card"
+                    prefetch="intent"
+                  >
+                    {thumb && (
+                      <img
+                        src={thumb.url}
+                        alt={thumb.alt || group.name}
+                        loading="lazy"
+                        className="gallery-explore__card-img"
+                      />
+                    )}
+                    <div className="gallery-explore__card-overlay" />
+                    <div className="gallery-explore__card-content">
+                      <p className="gallery-explore__card-label">{group.name}</p>
+                      <span className="gallery-explore__card-count">{group.images.length} photos</span>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </section>
-        ))}
+        )}
       </div>
 
-      {/* ── Lightbox ───────────────────────────────────────────────── */}
+      {/* ── Lightbox ─────────────────────────────────────────────── */}
       {lightbox != null && lbGroup && lbImg && (
         <div
           className="gallery-lightbox"
@@ -415,7 +455,6 @@ export default function GalleryPage() {
           onTouchEnd={onTouchEnd}
         >
           <div className="gallery-lightbox__backdrop" onClick={closeLightbox} />
-
           <div className="gallery-lightbox__stage" key={`${lightbox.groupIdx}-${lightbox.imgIdx}`}>
             <img
               src={lbImg.url}
@@ -423,15 +462,11 @@ export default function GalleryPage() {
               className="gallery-lightbox__img"
             />
           </div>
-
-          {/* Close */}
           <button className="gallery-lightbox__close" onClick={closeLightbox} aria-label="Close">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M1 1L13 13M13 1L1 13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
           </button>
-
-          {/* Prev / Next */}
           {lbGroup.images.length > 1 && (
             <>
               <button className="gallery-lightbox__nav gallery-lightbox__nav--prev" onClick={lbPrev} aria-label="Previous photo">
@@ -446,8 +481,6 @@ export default function GalleryPage() {
               </button>
             </>
           )}
-
-          {/* Footer */}
           <div className="gallery-lightbox__footer">
             <span className="gallery-lightbox__shoot">{lbGroup.name}</span>
             {lbGroup.images.length <= 30 && (

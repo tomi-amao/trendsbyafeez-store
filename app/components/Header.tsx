@@ -133,7 +133,7 @@ function AnnouncementBar() {
   const times = useTimezoneClocks();
 
   const items = TIMEZONES.map(([label], i) => (
-    <span className="announcement-bar__item" key={label}>
+    <span className="announcement-bar__item" key={label} > I WAS AT
       <span className="announcement-bar__dot" aria-hidden="true" />
       <span className="announcement-bar__city">{label}</span>
       <span className="announcement-bar__sep" aria-hidden="true" />
@@ -145,6 +145,7 @@ function AnnouncementBar() {
     <div className="announcement-bar">
       <div className="announcement-bar__track">
         {/* Duplicate for seamless loop */}
+        {items}
         {items}
         {items}
       </div>

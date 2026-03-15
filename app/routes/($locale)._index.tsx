@@ -235,7 +235,7 @@ function CollectionShowcase({
 
 /* ─── Marquee Divider ─────────────────────────────────────────── */
 function MarqueeDivider() {
-  const text = 'IF YOU SAW ME I WAS NEVER THERE \u00B7 Curated Fashion \u00B7 Modern Essentials \u00B7 ';
+  const text = 'IF YOU SAW ME \u00B7 I WAS NEVER THERE \u00B7 ';
   return (
     <div className="marquee-divider" aria-hidden="true">
       <div className="marquee-divider__track">

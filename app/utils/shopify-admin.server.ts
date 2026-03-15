@@ -90,6 +90,82 @@ export interface AdminFileNode {
   } | null;
 }
 
+/** Shape of a video source returned by the Admin Files API. */
+export interface AdminVideoSource {
+  url: string;
+  mimeType: string | null;
+  format: string | null;
+}
+
+/** Shape of a Video file node from the Admin Files API. */
+export interface AdminVideoNode {
+  id: string;
+  alt: string | null;
+  sources: AdminVideoSource[];
+}
+
+/**
+ * Fetch a single Video file from Shopify by filename prefix.
+ * Returns the first matching video node, or null if not found.
+ */
+export async function fetchAdminVideoByFilename(
+  storeDomain: string,
+  accessToken: string,
+  filenamePrefix: string,
+): Promise<AdminVideoNode | null> {
+  const apiUrl = `https://${storeDomain}/admin/api/2024-04/graphql.json`;
+
+  const res = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Shopify-Access-Token': accessToken,
+    },
+    body: JSON.stringify({
+      query: `
+        query AdminVideo($query: String) {
+          files(first: 1, query: $query) {
+            edges {
+              node {
+                ... on Video {
+                  id
+                  alt
+                  sources {
+                    url
+                    mimeType
+                    format
+                  }
+                }
+              }
+            }
+          }
+        }
+      `,
+      variables: {query: `filename:${filenamePrefix}`},
+    }),
+  });
+
+  if (!res.ok) {
+    console.error(`[ShopifyAdmin] Video fetch failed (HTTP ${res.status})`);
+    return null;
+  }
+
+  const json = (await res.json()) as any;
+  const node = json?.data?.files?.edges?.[0]?.node;
+
+  if (!node?.sources) return null;
+
+  return {
+    id: node.id as string,
+    alt: (node.alt as string | null) ?? null,
+    sources: (node.sources as any[]).map((s) => ({
+      url: s.url as string,
+      mimeType: (s.mimeType as string | null) ?? null,
+      format: (s.format as string | null) ?? null,
+    })),
+  };
+}
+
 /**
  * Fetch all MediaImage files from Shopify whose filenames match
  * the optional `filenamePrefix` filter (default: fetch all).
