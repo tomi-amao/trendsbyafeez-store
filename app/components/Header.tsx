@@ -1,5 +1,6 @@
 import {Suspense, useEffect, useState, useRef} from 'react';
 import {Await, NavLink, useAsyncValue, useLocation} from 'react-router';
+import {DotLottieReact} from '@lottiefiles/dotlottie-react';
 import {
   type CartViewPayload,
   useAnalytics,
@@ -134,7 +135,14 @@ function AnnouncementBar() {
 
   const items = TIMEZONES.map(([label], i) => (
     <span className="announcement-bar__item" key={label} > I WAS AT
-      <span className="announcement-bar__dot" aria-hidden="true" />
+      <span className="announcement-bar__globe" aria-hidden="true">
+        <DotLottieReact
+          src="https://lottie.host/27cabdbf-b17b-424c-8b45-8ff884f5bf38/YVx4SYzltC.lottie"
+          loop
+          autoplay
+          style={{width: '18px', height: '18px', filter: 'grayscale(1) brightness(2)'}}
+        />
+      </span>
       <span className="announcement-bar__city">{label}</span>
       <span className="announcement-bar__sep" aria-hidden="true" />
       <span className="announcement-bar__time">{times[i] ?? '--:--'}</span>

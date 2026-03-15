@@ -113,19 +113,23 @@ function HeroSection({collection}: {collection: FeaturedCollectionFragment}) {
         />
       )}
       <div className="hero__overlay" />
-      <div className="hero__content hero__content--bottom-left">
-        <p className="hero__eyebrow">New Collection</p>
-        <h1 className="hero__title">{collection.title}</h1>
+      <div className="hero__content">
+        <span className="hero__tag">Now Available</span>
+        <h1 className="hero__title">
+          <span className="hero__title-line">{collection.title}</span>
+        </h1>
         {collection.description && (
           <p className="hero__description">{collection.description}</p>
         )}
-        <Link
-          to={`/collections/${collection.handle}`}
-          className="hero__cta"
-          prefetch="intent"
-        >
-          Shop All
-        </Link>
+        <div className="hero__actions">
+          <Link
+            to={`/collections/${collection.handle}`}
+            className="hero__cta"
+            prefetch="intent"
+          >
+            Shop Now
+          </Link>
+        </div>
       </div>
     </section>
   );

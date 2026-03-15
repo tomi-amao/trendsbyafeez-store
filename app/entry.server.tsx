@@ -19,6 +19,13 @@ export default async function handleRequest(
       checkoutDomain: context.env.PUBLIC_CHECKOUT_DOMAIN,
       storeDomain: context.env.PUBLIC_STORE_DOMAIN,
     },
+    connectSrc: [
+      'https://cdn.jsdelivr.net',
+      'https://lottie.host',
+      'https://unpkg.com',
+    ],
+    scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
+    workerSrc: ["'self'", 'blob:'],
   });
 
   const body = await renderToReadableStream(

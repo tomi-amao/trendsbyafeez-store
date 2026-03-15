@@ -4,7 +4,7 @@
  * Displays the featured TRENDSBYFACES archive with video hero,
  * and links to explore other archives (INCOGNITO, etc.).
  */
-import type {Route} from './+types/gallery';
+import type {Route} from './+types/pages.gallery._index';
 import React, {useState, useCallback, useEffect, useRef} from 'react';
 import {useLoaderData, Link} from 'react-router';
 import {getAdminAccessToken, fetchAdminFiles, fetchAdminVideoByFilename} from '~/utils/shopify-admin.server';
@@ -356,12 +356,6 @@ export default function GalleryPage() {
             <span className="gallery-lightbox__counter">
               {lightbox + 1}&thinsp;/&thinsp;{featuredImages.length}
             </span>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
           </div>
         </div>
       )}
