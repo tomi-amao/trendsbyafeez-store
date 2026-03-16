@@ -166,12 +166,14 @@ a {
 .header--transparent {
   background: transparent;
   color: var(--color-light);
+  
 }
 
 .header--solid {
   background: var(--color-light);
   color: var(--color-dark);
   box-shadow: 0 1px 0 var(--color-border);
+  
 }
 
 /* Smart scroll: hide when scrolling down */
@@ -195,6 +197,7 @@ a {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+
 }
 
 .header__logo {
@@ -203,6 +206,21 @@ a {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.header__typeface {
+  height: 14px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+  /* Keep original white logo on transparent header */
+  filter: invert(0);
+  transition: filter 0.3s ease;
+}
+
+.header--solid .header__typeface,
+.header--hidden .header__typeface {
+  filter: invert(1);
 }
 
 .header__nav {
@@ -448,7 +466,7 @@ button.reset {
   left: 0;
   right: 0;
   z-index: 2;
-  padding: 0 clamp(1.5rem, 5vw, 4rem) clamp(3rem, 8vh, 6rem);
+  padding: 0 clamp(1.5rem, 5vw, 4rem) clamp(5rem, 12vh, 9rem);
   color: var(--color-light);
   max-width: 680px;
 }
@@ -3034,6 +3052,13 @@ html[data-header-state="hidden"] .collection-controls {
   background: #fff;
   color: var(--color-dark);
   overflow-x: hidden;
+  /* Pull up to sit flush under the fixed header / announcement bar */
+  margin-top: calc(-1 * (var(--announcement-height) + var(--header-height)));
+}
+
+/* Remove reset.css side margins on gallery page so video fills full width */
+body:has(.gallery-page) > main {
+  margin: 0;
 }
 
 /* ── Video Hero ────────────────────────────────────────────────── */
@@ -3347,6 +3372,41 @@ html[data-header-state="hidden"] .collection-controls {
   color: rgba(0,0,0,0.3);
 }
 
+/* ── TRENDSBYFACES grouped layout ─────────────────────────────── */
+
+.gallery-groups {
+  padding: 0 0 3rem;
+}
+
+.gallery-group {
+  margin-bottom: 4rem;
+}
+
+.gallery-group__header {
+  display: flex;
+  align-items: baseline;
+  gap: 1.25rem;
+  padding: 2rem clamp(1.25rem, 4vw, 3rem) 1.25rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.gallery-group__name {
+  font-size: clamp(1rem, 3vw, 1.75rem);
+  font-weight: 300;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  line-height: 1;
+  margin: 0;
+}
+
+.gallery-group__count {
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.32);
+  white-space: nowrap;
+}
+
 /* ── Grid ──────────────────────────────────────────────────────── */
 
 .gallery-grid {
@@ -3365,10 +3425,10 @@ html[data-header-state="hidden"] .collection-controls {
 
 @media (max-width: 639px) {
   .gallery-grid {
-    grid-template-columns: repeat(2, 1fr);
-    grid-auto-rows: 200px;
+    grid-template-columns: 1fr;
+    grid-auto-rows: 320px;
   }
-  /* Cancel custom spans on mobile for a clean uniform grid */
+  /* Cancel custom spans on mobile for a clean uniform single-column grid */
   .gallery-item {
     grid-column: span 1 !important;
     grid-row: span 1 !important;

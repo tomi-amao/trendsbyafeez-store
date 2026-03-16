@@ -24,7 +24,16 @@ export default async function handleRequest(
       'https://lottie.host',
       'https://unpkg.com',
     ],
-    scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
+    // Mirrors Hydrogen's defaultSrc origins so the explicit script-src
+    // directive doesn't drop any CDN domains that were previously covered
+    // by the default-src fallback. 'wasm-unsafe-eval' is required for
+    // WebAssembly.instantiateStreaming (used by @lottiefiles/dotlottie-web).
+    scriptSrc: [
+      "'self'",
+      "'wasm-unsafe-eval'",
+      'https://cdn.shopify.com',
+      'https://shopify.com',
+    ],
     workerSrc: ["'self'", 'blob:'],
   });
 

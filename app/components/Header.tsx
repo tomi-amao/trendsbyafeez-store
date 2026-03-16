@@ -1,5 +1,6 @@
 import {Suspense, useEffect, useState, useRef} from 'react';
-import {Await, NavLink, useAsyncValue, useLocation} from 'react-router';
+import {Await, NavLink, useAsyncValue, useLocation, useRouteLoaderData} from 'react-router';
+import type {RootLoader} from '~/root';
 import {DotLottieReact} from '@lottiefiles/dotlottie-react';
 import {
   type CartViewPayload,
@@ -54,9 +55,15 @@ export function Header({
 }: HeaderProps) {
   const {shop, menu} = header;
   const location = useLocation();
+  const rootData = useRouteLoaderData<RootLoader>('root');
+  const typefaceUrl = rootData?.typefaceUrl ?? null;
   const isHome =
     location.pathname === '/' ||
     Boolean(location.pathname.match(/^\/[a-z]{2}-[a-z]{2}\/?$/i));
+  // Also use transparent header on gallery index (full-screen video hero)
+  const isGalleryIndex =
+    location.pathname === '/pages/gallery' ||
+    Boolean(location.pathname.match(/^\/[a-z]{2}-[a-z]{2}\/pages\/gallery\/?$/i));
 
   // Smart scroll: transparent on home at top; hidden when scrolling down; solid when scrolling up
   const [headerState, setHeaderState] = useState<'top' | 'solid' | 'hidden'>('top');
@@ -98,7 +105,7 @@ export function Header({
 
   const headerClass = [
     'header',
-    isHome && headerState === 'top' ? 'header--transparent' : 'header--solid',
+    (isHome || isGalleryIndex) && headerState === 'top' ? 'header--transparent' : 'header--solid',
     headerState === 'hidden' ? 'header--hidden' : '',
   ]
     .filter(Boolean)
@@ -117,8 +124,16 @@ export function Header({
           />
         </div>
         <div className="header__center">
-          <NavLink prefetch="intent" to="/" end>
-            <span className="header__logo">{shop.name}</span>
+          <NavLink prefetch="intent" to="/" end aria-label={shop.name}>
+            {typefaceUrl ? (
+              <img
+                src={typefaceUrl}
+                alt={shop.name}
+                className="header__typeface"
+              />
+            ) : (
+              <span className="header__logo">{shop.name}</span>
+            )}
           </NavLink>
         </div>
         <div className="header__right">

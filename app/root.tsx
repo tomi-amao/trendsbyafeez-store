@@ -13,6 +13,7 @@ import {
 import type {Route} from './+types/root';
 import favicon from '~/assets/favicon.svg';
 import {FOOTER_QUERY, HEADER_QUERY} from '~/lib/fragments';
+import {getAdminAccessToken, fetchAdminFiles} from '~/utils/shopify-admin.server';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import tailwindCss from './styles/tailwind.css?url';
@@ -100,18 +101,35 @@ export async function loader(args: Route.LoaderArgs) {
  */
 async function loadCriticalData({context}: Route.LoaderArgs) {
   const {storefront} = context;
+  const env = (context as any).env as Record<string, string | undefined>;
 
   const [header] = await Promise.all([
     storefront.query(HEADER_QUERY, {
       cache: storefront.CacheLong(),
       variables: {
-        headerMenuHandle: 'main-menu', // Adjust to your header menu handle
+        headerMenuHandle: 'main-menu',
       },
     }),
-    // Add other queries here, so that they are loaded in parallel
   ]);
 
-  return {header};
+  // Fetch the typeface image for the header logo
+  let typefaceUrl: string | null = null;
+  try {
+    const {clientId, clientSecret, storeDomain} = {
+      clientId: env?.SHOPIFY_CLIENT_ID,
+      clientSecret: env?.SHOPIFY_CLIENT_SECRET,
+      storeDomain: env?.PUBLIC_STORE_DOMAIN,
+    };
+    if (clientId && clientSecret && storeDomain) {
+      const token = await getAdminAccessToken(storeDomain, clientId, clientSecret);
+      const files = await fetchAdminFiles(storeDomain, token, {filenamePrefix: 'TRENDSBYAFEEZ_TYPEFACE', limit: 1});
+      typefaceUrl = files[0]?.image?.url ?? null;
+    }
+  } catch {
+    // Non-critical — falls back to text logo
+  }
+
+  return {header, typefaceUrl};
 }
 
 /**
