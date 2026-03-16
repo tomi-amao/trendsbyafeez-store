@@ -3067,7 +3067,7 @@ body:has(.gallery-page) > main {
   position: relative;
   width: 100vw;
   margin-left: calc((100% - 100vw) / 2);
-  height: 100dvh;
+  height: calc(100dvh + var(--header-height));
   overflow: hidden;
   background: #080808;
 }
