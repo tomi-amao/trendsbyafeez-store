@@ -38,13 +38,28 @@ const ARCHIVE_CONFIG: Record<string, {prefix: string; name: string}> = {
   incognito: {prefix: 'INCOGNITO_', name: 'Incognito'},
 };
 
-/* ─── Grid span helper (for TRENDSBYFACES masonry) ───────────────── */
-function getItemSpan(idx: number): React.CSSProperties {
-  if (idx === 0) return {gridColumn: 'span 2', gridRow: 'span 2'};
-  const c = (idx - 1) % 7;
-  if (c === 3) return {gridColumn: 'span 2'};
-  if (c === 5) return {gridRow: 'span 2'};
-  return {};
+/* ─── TRENDSBYFACES group helpers ────────────────────────────────── */
+interface ShootGroup {
+  name: string;
+  images: GalleryImage[];
+}
+
+function parseGroupName(url: string): string | null {
+  const raw = decodeURIComponent(url.split('/').pop()!).split('?')[0];
+  // TRENDSBYFACES_GROUPNAME_... — capture the part after the first underscore
+  const match = raw.match(/^TRENDSBYFACES_([^_.]+)/i);
+  return match ? match[1].toUpperCase() : null;
+}
+
+function groupByName(images: GalleryImage[]): ShootGroup[] {
+  const map = new Map<string, GalleryImage[]>();
+  for (const img of images) {
+    const name = parseGroupName(img.url);
+    if (!name) continue;
+    if (!map.has(name)) map.set(name, []);
+    map.get(name)!.push(img);
+  }
+  return Array.from(map.entries()).map(([name, imgs]) => ({name, images: imgs}));
 }
 
 /* ─── Loader ─────────────────────────────────────────────────────── */
@@ -105,6 +120,9 @@ export default function GalleryArchivePage() {
   const images = archive?.images ?? [];
   const lbImg = lightbox != null ? images[lightbox] : null;
   const isIncognito = archive?.slug === 'incognito';
+  const isTrendsByFaces = archive?.slug === 'trendsbyfaces';
+  // Build groups for TRENDSBYFACES
+  const shootGroups: ShootGroup[] = isTrendsByFaces ? groupByName(images) : [];
 
   /* ── lightbox helpers ─────────────────────────────────────────── */
   const openLightbox = useCallback((idx: number) => {
@@ -260,14 +278,54 @@ export default function GalleryArchivePage() {
               </div>
             )}
           </section>
+        ) : isTrendsByFaces ? (
+          /* ── TRENDSBYFACES: grouped by name ──────────────────── */
+          <div className="gallery-groups">
+            {shootGroups.map((group) => (
+              <section key={group.name} className="gallery-group">
+                <div className="gallery-group__header">
+                  <span className="gallery-group__name">{group.name}</span>
+                  <span className="gallery-group__count">{group.images.length} photos</span>
+                </div>
+                <div className="gallery-grid">
+                  {group.images.map((img, idx) => (
+                    <button
+                      key={img.id}
+                      className="gallery-item"
+                      onClick={() => {
+                        // Open lightbox at the global index
+                        const globalIdx = images.indexOf(img);
+                        openLightbox(globalIdx >= 0 ? globalIdx : idx);
+                      }}
+                      aria-label={`Open ${group.name} photo ${idx + 1}`}
+                    >
+                      <img
+                        src={img.url}
+                        alt={img.alt || `${group.name} ${idx + 1}`}
+                        loading={idx < 2 ? 'eager' : 'lazy'}
+                        decoding="async"
+                        className="gallery-item__img"
+                      />
+                      <div className="gallery-item__overlay" aria-hidden="true">
+                        <svg className="gallery-item__icon" width="22" height="22" viewBox="0 0 22 22" fill="none">
+                          <rect x="0.75" y="0.75" width="20.5" height="20.5" rx="1.25" stroke="white" strokeWidth="1.5" />
+                          <path d="M7 11h8M11 7v8" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                        </svg>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
         ) : (
+          /* ── Other archives: plain masonry grid ──────────────── */
           <section className="gallery-section gallery-section--group">
             <div className="gallery-grid">
               {images.map((img, idx) => (
                 <button
                   key={img.id}
                   className="gallery-item"
-                  style={getItemSpan(idx)}
                   onClick={() => openLightbox(idx)}
                   aria-label={`Open ${archive.name} photo ${idx + 1}`}
                 >

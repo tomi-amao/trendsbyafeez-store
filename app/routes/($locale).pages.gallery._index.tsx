@@ -205,7 +205,7 @@ export default function GalleryPage() {
           <div className="gallery-video-hero__overlay" />
           <div className="gallery-video-hero__content">
             <p className="gallery-video-hero__eyebrow">Behind the Lens</p>
-            <h1 className="gallery-video-hero__title">Gallery</h1>
+            <h1 className="gallery-video-hero__title">Archives</h1>
             <p className="gallery-video-hero__meta">
               {archiveCount} Archive{archiveCount > 1 ? 's' : ''}&ensp;&middot;&ensp;{totalPhotos} Photos
             </p>

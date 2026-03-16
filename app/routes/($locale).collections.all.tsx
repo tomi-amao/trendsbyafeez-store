@@ -92,7 +92,6 @@ export default function AllProducts() {
     <div className="collection">
       {/* Header */}
       <div className="collection-page-header">
-        <h1 className="collection-page-header__title">All Products</h1>
         <div className="collection-page-header__rule" />
       </div>
 
