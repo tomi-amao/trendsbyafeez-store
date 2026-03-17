@@ -6,6 +6,33 @@ import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {ProductItem} from '~/components/ProductItem';
 import type {ProductItemFragment} from 'storefrontapi.generated';
 import {useState, useCallback} from 'react';
+import React from 'react';
+import {getAdminAccessToken, fetchAdminFiles} from '~/utils/shopify-admin.server';
+
+/* ─── Editorial Tile ─────────────────────────────────────────────── */
+interface EditorialImage {
+  id: string;
+  url: string;
+  alt: string | null;
+}
+
+// Configurable
+const EDITORIAL_INTERVAL = 4; // Insert editorial every N products
+// TODO: update this href when the linked product/page is decided
+const EDITORIAL_LINK = '/collections/crown';
+
+function EditorialTile({image}: {image: EditorialImage}) {
+  return (
+    <Link to={EDITORIAL_LINK} className="editorial-tile" prefetch="none">
+      <img
+        src={image.url}
+        alt={image.alt || 'Editorial'}
+        className="editorial-tile__img"
+        loading="lazy"
+      />
+    </Link>
+  );
+}
 
 export const meta: Route.MetaFunction = ({data}) => {
   return [{title: `TrendsByAfeez | ${data?.collection.title ?? ''} Collection`}];
@@ -51,10 +78,33 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
 
   redirectIfHandleIsLocalized(request, {handle, data: collection});
 
-  return {collection};
+  // For the crown collection, fetch editorial images
+  let editorialImages: EditorialImage[] = [];
+  if (handle === 'crown') {
+    try {
+      const env = (context as any).env as Record<string, string | undefined>;
+      const clientId = env?.SHOPIFY_CLIENT_ID;
+      const clientSecret = env?.SHOPIFY_CLIENT_SECRET;
+      const storeDomain = env?.PUBLIC_STORE_DOMAIN;
+      if (clientId && clientSecret && storeDomain) {
+        const adminToken = await getAdminAccessToken(storeDomain, clientId, clientSecret);
+        const files = await fetchAdminFiles(storeDomain, adminToken, {
+          filenamePrefix: 'EDITORIAL_HAT_',
+          limit: 20,
+        });
+        editorialImages = files
+          .filter((f) => f.image !== null)
+          .map((f) => ({id: f.id, url: f.image!.url, alt: f.alt}));
+      }
+    } catch {
+      // Editorial images are optional — fail gracefully
+    }
+  }
+
+  return {collection, editorialImages};
 }
 
-function loadDeferredData({context}: Route.LoaderArgs) {
+function loadDeferredData(_args: Route.LoaderArgs) {
   return {};
 }
 
@@ -69,7 +119,8 @@ const SORT_OPTIONS = [
 ];
 
 export default function Collection() {
-  const {collection} = useLoaderData<typeof loader>();
+  const {collection, editorialImages} = useLoaderData<typeof loader>();
+  const isCrownCollection = collection.handle === 'crown';  
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [sortOpen, setSortOpen] = useState(false);
@@ -115,7 +166,7 @@ export default function Collection() {
   return (
     <div className="collection">
       {/* Collection Header */}
-      <div className="collection-header">
+      {/* <div className="collection-header">
         {collection.image && (
           <>
             <Image
@@ -131,7 +182,7 @@ export default function Collection() {
         <div className="collection-header__content collection-header__content--bottom-left">
           <h1 className="collection-header__title collection-header__title--sm">{collection.title}</h1>
         </div>
-      </div>
+      </div> */}
 
       {/* ── Sticky Controls Bar ── */}
       <div className="collection-controls">
@@ -218,14 +269,21 @@ export default function Collection() {
       <div className="collection-products">
         <PaginatedResourceSection<ProductItemFragment>
           connection={collection.products}
-          resourcesClassName="products-grid"
+          resourcesClassName={`products-grid${isCrownCollection && editorialImages.length > 0 ? ' products-grid--editorial' : ''}`}
         >
           {({node: product, index}) => (
-            <ProductItem
-              key={product.id}
-              product={product}
-              loading={index < 8 ? 'eager' : undefined}
-            />
+            <React.Fragment key={product.id}>
+              {/* Insert editorial tile at configurable intervals */}
+              {isCrownCollection && editorialImages.length > 0 && index > 0 && index % EDITORIAL_INTERVAL === 0 && (
+                <EditorialTile
+                  image={editorialImages[Math.floor(index / EDITORIAL_INTERVAL - 1) % editorialImages.length]}
+                />
+              )}
+              <ProductItem
+                product={product}
+                loading={index < 8 ? 'eager' : undefined}
+              />
+            </React.Fragment>
           )}
         </PaginatedResourceSection>
       </div>
@@ -262,12 +320,22 @@ const PRODUCT_ITEM_FRAGMENT = `#graphql
     handle
     title
     availableForSale
+    totalInventory
     featuredImage {
       id
       altText
       url
       width
       height
+    }
+    images(first: 2) {
+      nodes {
+        id
+        altText
+        url
+        width
+        height
+      }
     }
     priceRange {
       minVariantPrice {

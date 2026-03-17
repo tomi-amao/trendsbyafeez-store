@@ -41,37 +41,64 @@ export default function SearchPage() {
   if (type === 'predictive') return null;
 
   return (
-    <div className="search">
-      <h1>Search</h1>
-      <SearchForm>
-        {({inputRef}) => (
-          <>
-            <input
-              defaultValue={term}
-              name="q"
-              placeholder="Search…"
-              ref={inputRef}
-              type="search"
-            />
-            &nbsp;
-            <button type="submit">Search</button>
-          </>
-        )}
-      </SearchForm>
-      {error && <p style={{color: 'red'}}>{error}</p>}
-      {!term || !result?.total ? (
-        <SearchResults.Empty />
-      ) : (
-        <SearchResults result={result} term={term}>
-          {({articles, pages, products, term}) => (
-            <div>
-              <SearchResults.Products products={products} term={term} />
-              <SearchResults.Pages pages={pages} term={term} />
-              <SearchResults.Articles articles={articles} term={term} />
-            </div>
+    <div className="search-page">
+      {/* ── Hero search bar ──────────────────────────────────────── */}
+      <div className="search-page__hero">
+        <div className="search-page__hero-inner">
+          <SearchForm>
+            {({inputRef}) => (
+              <div className="search-page__form">
+                <svg
+                  className="search-page__form-icon"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 18 18"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M12 12L16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+                <input
+                  defaultValue={term}
+                  name="q"
+                  placeholder="Search products, collections…"
+                  ref={inputRef}
+                  type="search"
+                  className="search-page__input"
+                  autoFocus
+                />
+                <button type="submit" className="search-page__submit">
+                  Search
+                </button>
+              </div>
+            )}
+          </SearchForm>
+          {term && (
+            <p className="search-page__term-label">
+              Showing results for <strong>&ldquo;{term}&rdquo;</strong>
+            </p>
           )}
-        </SearchResults>
-      )}
+        </div>
+      </div>
+
+      {/* ── Results ──────────────────────────────────────────────── */}
+      <div className="search-page__body">
+        {error && <p className="search-page__error">{error}</p>}
+        {!term || !result?.total ? (
+          <SearchResults.Empty />
+        ) : (
+          <SearchResults result={result} term={term}>
+            {({articles, pages, products, term}) => (
+              <>
+                <SearchResults.Products products={products} term={term} />
+                <SearchResults.Pages pages={pages} term={term} />
+                <SearchResults.Articles articles={articles} term={term} />
+              </>
+            )}
+          </SearchResults>
+        )}
+      </div>
       <Analytics.SearchView data={{searchTerm: term, searchResults: result}} />
     </div>
   );

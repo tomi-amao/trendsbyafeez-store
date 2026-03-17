@@ -187,17 +187,16 @@ function DesktopNav({
 }) {
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Close submenu on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (navRef.current && !navRef.current.contains(e.target as Node)) {
-        setOpenSubmenu(null);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  const handleMouseEnter = (id: string) => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    setOpenSubmenu(id);
+  };
+
+  const handleMouseLeave = () => {
+    closeTimerRef.current = setTimeout(() => setOpenSubmenu(null), 120);
+  };
 
   const resolveUrl = (url: string) =>
     url.includes('myshopify.com') ||
@@ -219,47 +218,43 @@ function DesktopNav({
             <div
               key={item.id}
               className={`header__nav-item header__nav-item--has-submenu${isOpen ? ' header__nav-item--open' : ''}`}
+              onMouseEnter={() => handleMouseEnter(item.id)}
+              onMouseLeave={handleMouseLeave}
             >
               <button
                 className="header__nav-link header__nav-link--btn"
-                onClick={() => setOpenSubmenu(isOpen ? null : item.id)}
                 aria-expanded={isOpen}
                 aria-haspopup="true"
               >
                 {item.title}
-                <svg width="8" height="5" viewBox="0 0 8 5" fill="none" style={{marginLeft: '4px', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none'}}>
-                  <path d="M1 1L4 4L7 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
               </button>
-              {isOpen && (
-                <div className="header__submenu" role="menu">
-                  <NavLink
-                    className="header__submenu-link"
-                    to={url}
-                    prefetch="intent"
-                    onClick={() => setOpenSubmenu(null)}
-                    role="menuitem"
-                  >
-                    All {item.title}
-                  </NavLink>
-                  {item.items!.map((sub) => {
-                    if (!sub.url) return null;
-                    const subUrl = resolveUrl(sub.url);
-                    return (
-                      <NavLink
-                        key={sub.id}
-                        className="header__submenu-link"
-                        to={subUrl}
-                        prefetch="intent"
-                        onClick={() => setOpenSubmenu(null)}
-                        role="menuitem"
-                      >
-                        {sub.title}
-                      </NavLink>
-                    );
-                  })}
-                </div>
-              )}
+              <div className="header__submenu" role="menu" aria-hidden={!isOpen}>
+                <NavLink
+                  className="header__submenu-link header__submenu-link--all"
+                  to={url}
+                  prefetch="intent"
+                  onClick={() => setOpenSubmenu(null)}
+                  role="menuitem"
+                >
+                  All {item.title}
+                </NavLink>
+                {item.items!.map((sub) => {
+                  if (!sub.url) return null;
+                  const subUrl = resolveUrl(sub.url);
+                  return (
+                    <NavLink
+                      key={sub.id}
+                      className="header__submenu-link"
+                      to={subUrl}
+                      prefetch="intent"
+                      onClick={() => setOpenSubmenu(null)}
+                      role="menuitem"
+                    >
+                      {sub.title}
+                    </NavLink>
+                  );
+                })}
+              </div>
             </div>
           );
         }

@@ -91,9 +91,6 @@ export default function AllProducts() {
   return (
     <div className="collection">
       {/* Header */}
-      <div className="collection-page-header">
-        <div className="collection-page-header__rule" />
-      </div>
 
       {/* Controls */}
       <div className="collection-controls">
@@ -178,12 +175,22 @@ const COLLECTION_ITEM_FRAGMENT = `#graphql
     handle
     title
     availableForSale
+    totalInventory
     featuredImage {
       id
       altText
       url
       width
       height
+    }
+    images(first: 2) {
+      nodes {
+        id
+        altText
+        url
+        width
+        height
+      }
     }
     priceRange {
       minVariantPrice {

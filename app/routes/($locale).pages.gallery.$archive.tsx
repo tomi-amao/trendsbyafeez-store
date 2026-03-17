@@ -213,11 +213,8 @@ export default function GalleryArchivePage() {
             </svg>
             Gallery
           </Link>
-          <div className="gallery-group-header__content">
-            <p className="gallery-group-header__eyebrow">Archive</p>
-            <h1 className="gallery-group-header__name">{archive.name}</h1>
-            <span className="gallery-group-header__count">{archive.images.length} Photos</span>
-          </div>
+          <h1 className="gallery-group-header__name">{archive.name}</h1>
+          <span className="gallery-group-header__count">{archive.images.length} Photos</span>
         </div>
 
         {/* ── Layout: INCOGNITO (editorial) or standard grid ─────── */}
