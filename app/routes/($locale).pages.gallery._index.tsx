@@ -108,7 +108,8 @@ export default function GalleryPage() {
   const featuredImages = featured?.images ?? [];
   const lbImg = lightbox != null ? featuredImages[lightbox] : null;
 
-  const FEATURED_PREVIEW = 8;
+  // Show more on desktop — 12 images fills a 4-col masonry grid nicely
+  const FEATURED_PREVIEW = 12;
 
   /* ── lightbox helpers ─────────────────────────────────────────── */
   const openLightbox = useCallback((idx: number) => {

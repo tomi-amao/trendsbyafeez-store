@@ -45,9 +45,29 @@ type ProductCardProduct =
   | ProductItemFragment
   | RecommendedProductFragment;
 
+// Extended type to access optional fields added to queries (run codegen after)
+type ProductWithExtras = ProductCardProduct & {
+  totalInventory?: number | null;
+  images?: {nodes: QvImage[]} | null;
+};
+
+const LOW_STOCK_THRESHOLD = 5;
+
 function getAvailability(product: ProductCardProduct): boolean {
   if ('availableForSale' in product) return product.availableForSale as boolean;
   return true;
+}
+
+function getTotalInventory(product: ProductCardProduct): number | null {
+  const p = product as ProductWithExtras;
+
+  return typeof p.totalInventory === 'number' ? p.totalInventory : null;
+}
+
+function getSecondImage(product: ProductCardProduct): QvImage | null {
+  const p = product as ProductWithExtras;
+  const nodes = p.images?.nodes;
+  return nodes && nodes.length > 1 ? nodes[1] : null;
 }
 
 export function ProductItem({
@@ -61,6 +81,9 @@ export function ProductItem({
   const variantUrl = useVariantUrl(product.handle);
   const image = product.featuredImage;
   const available = getAvailability(product);
+  const inventory = getTotalInventory(product);
+  const isLowStock = inventory !== null && inventory > 0 && inventory <= LOW_STOCK_THRESHOLD;
+  const secondImage = getSecondImage(product);
 
   const openQuickView = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -89,9 +112,10 @@ export function ProductItem({
         {/* Image area with overlaid controls */}
         <div className="product-card__fig">
           <Link className="product-card" prefetch="intent" to={variantUrl} tabIndex={-1} aria-hidden="true">
-            <div className="product-card__image">
+            <div className={`product-card__image${secondImage ? ' product-card__image--has-hover' : ''}`}>
               {image && (
                 <Image
+                  className="product-card__image-primary"
                   alt={image.altText || product.title}
                   aspectRatio="3/4"
                   data={image}
@@ -99,9 +123,24 @@ export function ProductItem({
                   sizes="(min-width: 768px) 25vw, 50vw"
                 />
               )}
+              {secondImage && (
+                <Image
+                  className="product-card__image-hover"
+                  alt={secondImage.altText || product.title}
+                  aspectRatio="3/4"
+                  data={secondImage}
+                  loading="lazy"
+                  sizes="(min-width: 768px) 25vw, 50vw"
+                />
+              )}
               {!available && (
                 <div className="product-card__sold-out-badge" aria-label="Sold out">
                   <span>Sold Out</span>
+                </div>
+              )}
+              {available && isLowStock && (
+                <div className="product-card__low-stock-badge" aria-label={`Only ${inventory} left`}>
+                  <span>Only {inventory} left</span>
                 </div>
               )}
             </div>
@@ -131,6 +170,11 @@ export function ProductItem({
           <span className="product-card__price">
             <Money data={product.priceRange.minVariantPrice} />
           </span>
+          {available && isLowStock && (
+            <span className="product-card__low-stock-text" aria-live="polite">
+              Only {inventory} left
+            </span>
+          )}
         </Link>
       </div>
 
