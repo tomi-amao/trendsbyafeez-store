@@ -138,11 +138,11 @@ export function ProductItem({
                   <span>Sold Out</span>
                 </div>
               )}
-              {available && isLowStock && (
+              {/* {available && isLowStock && (
                 <div className="product-card__low-stock-badge" aria-label={`Only ${inventory} left`}>
                   <span>Only {inventory} left</span>
                 </div>
-              )}
+              )} */}
             </div>
           </Link>
           {/* Quick View — desktop hover */}
@@ -170,11 +170,11 @@ export function ProductItem({
           <span className="product-card__price">
             <Money data={product.priceRange.minVariantPrice} />
           </span>
-          {available && isLowStock && (
+          {/* {available && isLowStock && (
             <span className="product-card__low-stock-text" aria-live="polite">
               Only {inventory} left
             </span>
-          )}
+          )} */}
         </Link>
       </div>
 

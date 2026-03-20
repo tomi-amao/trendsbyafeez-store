@@ -21,9 +21,10 @@ const EDITORIAL_INTERVAL = 4; // Insert editorial every N products
 // TODO: update this href when the linked product/page is decided
 const EDITORIAL_LINK = '/collections/crown';
 
-function EditorialTile({image}: {image: EditorialImage}) {
+function EditorialTile({image, editorialIndex}: {image: EditorialImage; editorialIndex: number}) {
+  const side = editorialIndex % 2 === 0 ? 'left' : 'right';
   return (
-    <Link to={EDITORIAL_LINK} className="editorial-tile" prefetch="none">
+    <Link to={EDITORIAL_LINK} className={`editorial-tile editorial-tile--${side}`} prefetch="none">
       <img
         src={image.url}
         alt={image.alt || 'Editorial'}
@@ -78,9 +79,9 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
 
   redirectIfHandleIsLocalized(request, {handle, data: collection});
 
-  // For the crown collection, fetch editorial images
+  // For the crowns collection, fetch editorial images
   let editorialImages: EditorialImage[] = [];
-  if (handle === 'crown') {
+  if (handle === 'crowns') {
     try {
       const env = (context as any).env as Record<string, string | undefined>;
       const clientId = env?.SHOPIFY_CLIENT_ID;
@@ -120,7 +121,7 @@ const SORT_OPTIONS = [
 
 export default function Collection() {
   const {collection, editorialImages} = useLoaderData<typeof loader>();
-  const isCrownCollection = collection.handle === 'crown';  
+  const isCrownCollection = collection.handle === 'crowns';  
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [sortOpen, setSortOpen] = useState(false);
@@ -274,11 +275,15 @@ export default function Collection() {
           {({node: product, index}) => (
             <React.Fragment key={product.id}>
               {/* Insert editorial tile at configurable intervals */}
-              {isCrownCollection && editorialImages.length > 0 && index > 0 && index % EDITORIAL_INTERVAL === 0 && (
-                <EditorialTile
-                  image={editorialImages[Math.floor(index / EDITORIAL_INTERVAL - 1) % editorialImages.length]}
-                />
-              )}
+              {isCrownCollection && editorialImages.length > 0 && index > 0 && index % EDITORIAL_INTERVAL === 0 && (() => {
+                const editorialIndex = Math.floor(index / EDITORIAL_INTERVAL) - 1;
+                return (
+                  <EditorialTile
+                    image={editorialImages[editorialIndex % editorialImages.length]}
+                    editorialIndex={editorialIndex}
+                  />
+                );
+              })()}
               <ProductItem
                 product={product}
                 loading={index < 8 ? 'eager' : undefined}

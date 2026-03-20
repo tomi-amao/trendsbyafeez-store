@@ -98,7 +98,7 @@ function CartDiscounts({
         </div>
       </dl>
 
-      <UpdateDiscountForm discountCodes={codes}>
+      {/* <UpdateDiscountForm discountCodes={codes}>
         <div className="cart-discount-form">
           <label htmlFor={discountCodeInputId} className="sr-only">
             Discount code
@@ -114,7 +114,7 @@ function CartDiscounts({
             Apply
           </button>
         </div>
-      </UpdateDiscountForm>
+      </UpdateDiscountForm> */}
     </section>
   );
 }
