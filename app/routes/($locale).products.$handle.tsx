@@ -177,14 +177,14 @@ export default function Product() {
               price={selectedVariant?.price}
               compareAtPrice={selectedVariant?.compareAtPrice}
             />
-            {(() => {
+            {/* {(() => {
               const inv = (product as any).totalInventory;
               return typeof inv === 'number' && inv > 0 && inv <= 5 ? (
                 <p className="product-info__low-stock" aria-live="polite">
                   Only {inv} left
                 </p>
               ) : null;
-            })()}
+            })()} */}
           </div>
 
           <ProductForm

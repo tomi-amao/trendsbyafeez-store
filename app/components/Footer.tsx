@@ -8,6 +8,17 @@ interface FooterProps {
   publicStoreDomain: string;
 }
 
+function MarqueeDivider() {
+  const text = 'IF YOU SAW ME \u00B7 I WAS NEVER THERE \u00B7 ';
+  return (
+    <div className="marquee-divider" aria-hidden="true">
+      <div className="marquee-divider__track">
+        <span className="marquee-divider__text">{text}{text}{text}{text}</span>
+      </div>
+    </div>
+  );
+}
+
 export function Footer({
   footer: footerPromise,
   header,
@@ -20,7 +31,8 @@ export function Footer({
           <footer className="footer">
             <div className="footer__grid">
               <div className="footer__brand">
-                <h2>{header.shop.name}</h2>
+                <h2>STAY LOCKED IN</h2>
+
                 <p
                   style={{
                     fontSize: '0.8rem',
@@ -29,7 +41,6 @@ export function Footer({
                     lineHeight: 1.6,
                   }}
                 >
-                  IF YOU SAW ME I WAS NEVER THERE
                   
                 </p>
                 <div className="footer__newsletter-form">
@@ -85,6 +96,8 @@ export function Footer({
                 </ul>
               </div>
             </div>
+      <MarqueeDivider />
+
             <div className="footer__bottom">
               <span>
                 &copy; {new Date().getFullYear()} {header.shop.name}. All rights

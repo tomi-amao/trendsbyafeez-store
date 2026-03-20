@@ -68,7 +68,7 @@ export async function loader({context}: Route.LoaderArgs) {
     const tbaImages = toImages(tbaFiles);
     const incognitoImages = toImages(incognitoFiles);
 
-    const featured: Archive = {name: 'TrendsByFaces', slug: 'trendsbyfaces', images: tbaImages};
+    const featured: Archive = {name: 'TrendsByUs', slug: 'trendsbyfaces', images: tbaImages};
     const otherArchives: Archive[] = [];
     if (incognitoImages.length > 0) {
       otherArchives.push({name: 'Incognito', slug: 'incognito', images: incognitoImages});

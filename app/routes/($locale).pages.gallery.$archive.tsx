@@ -193,7 +193,7 @@ export default function GalleryArchivePage() {
             </svg>
             Gallery
           </Link>
-          <h1 className="gallery-group-header__name">{archiveName}</h1>
+          {/* <h1 className="gallery-group-header__name">{archiveName}</h1> */}
         </div>
         <div className="gallery-coming-soon">
           <p className="gallery-coming-soon__sub">No photos found for this archive.</p>
@@ -207,13 +207,8 @@ export default function GalleryArchivePage() {
       <div className="gallery-page">
         {/* ── Archive Header ─────────────────────────────────────── */}
         <div className="gallery-group-header">
-          <Link to="/pages/gallery" className="gallery-group-back" prefetch="intent">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Gallery
-          </Link>
-          <h1 className="gallery-group-header__name">{archive.name}</h1>
+
+          {/* <h1 className="gallery-group-header__name">{archive.name}</h1> */}
           <span className="gallery-group-header__count">{archive.images.length} Photos</span>
         </div>
 

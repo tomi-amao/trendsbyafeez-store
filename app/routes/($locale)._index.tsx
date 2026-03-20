@@ -87,11 +87,10 @@ export default function Homepage() {
   return (
     <div className="home">
       <HeroSection collection={data.featuredCollection} />
-      <MarqueeDivider />
-      <FeaturedProducts products={data.recommendedProducts} />
-      <CollectionShowcase collections={data.allCollections} />
+      {/* <FeaturedProducts products={data.recommendedProducts} /> */}
+      {/* <CollectionShowcase collections={data.allCollections} /> */}
       {/* <BrandValues /> */}
-      <SplitSection brandImage={data.brandImage} />
+      {/* <SplitSection brandImage={data.brandImage} /> */}
     </div>
   );
 }
@@ -114,10 +113,10 @@ function HeroSection({collection}: {collection: FeaturedCollectionFragment}) {
       )}
       <div className="hero__overlay" />
       <div className="hero__content">
-        <span className="hero__tag">Now Available</span>
-        <h1 className="hero__title">
+        {/* <span className="hero__tag">Now Available</span> */}
+        {/* <h1 className="hero__title">
           <span className="hero__title-line">{collection.title}</span>
-        </h1>
+        </h1> */}
         {collection.description && (
           <p className="hero__description">{collection.description}</p>
         )}
