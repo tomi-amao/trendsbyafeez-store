@@ -72,128 +72,74 @@
 
   /* ── Flip Clock ── */
   #countdown {
-    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-    text-align: center; z-index: 50;
-    pointer-events: none;
+    position: fixed; top: 22px; left: 50%; transform: translateX(-50%);
+    text-align: center; z-index: 50; pointer-events: none;
   }
   .cd-label {
-    font-size: 8px; letter-spacing: 0.38em; font-weight: 700;
-    color: rgba(255,255,255,0.25); margin-bottom: 14px;
-    font-family: 'Orbitron', system-ui, sans-serif; text-transform: uppercase;
+    font-size: 8px; letter-spacing: 0.30em; font-weight: 400;
+    color: rgba(255,255,255,0.18); margin-bottom: 10px;
+    font-family: 'Inter', system-ui, sans-serif; text-transform: uppercase;
   }
-  .cd-timer { display: flex; align-items: flex-start; justify-content: center; gap: 8px; }
+  .cd-timer { display: flex; align-items: flex-end; justify-content: center; gap: 4px; }
   .cd-sep {
-    font-size: 30px; color: rgba(255,255,255,0.20); line-height: 1;
-    padding: 0 1px; font-family: 'Courier New', monospace; margin-top: 5px;
+    font-size: 24px; font-weight: 200; color: rgba(255,255,255,0.15); line-height: 1;
+    padding-bottom: 13px; font-family: 'Inter', system-ui, sans-serif;
   }
-  .flip-unit { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .flip-unit { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .flip-unit small {
-    font-size: 7px; letter-spacing: 0.22em; font-weight: 700;
-    color: rgba(255,255,255,0.18); font-family: 'Orbitron', system-ui, sans-serif;
+    font-size: 7px; letter-spacing: 0.14em; font-weight: 400;
+    color: rgba(255,255,255,0.13); font-family: 'Inter', system-ui, sans-serif;
     text-transform: uppercase;
   }
-  .flip-card {
-    position: relative; width: 54px; height: 68px;
-    perspective: 180px;
+  .flip-card { width: 50px; height: 58px; perspective: 400px; }
+  .fc-face {
+    width: 100%; height: 100%; border-radius: 5px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 34px; font-weight: 200; color: rgba(255,255,255,0.88);
+    font-variant-numeric: tabular-nums;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.03em;
   }
-  /* All 4 panels share the same base layout */
-  .flip-card .fc-upper,
-  .flip-card .fc-lower,
-  .flip-card .fc-fa,
-  .flip-card .fc-fb {
-    position: absolute; left: 0; right: 0;
-    background: #141414; color: #fff;
-    font-size: 40px; font-weight: 700;
-    font-family: 'Courier New', Courier, monospace;
-    display: flex; justify-content: center;
-    overflow: hidden;
+  @keyframes fcFlip {
+    0%   { transform: rotateX(0deg);   opacity: 1; }
+    40%  { transform: rotateX(-90deg); opacity: 0; }
+    60%  { transform: rotateX(-90deg); opacity: 0; }
+    100% { transform: rotateX(0deg);   opacity: 1; }
   }
-  /*
-   * Correct clip orientation for a flip clock:
-   *   Upper panels: text pinned to TOP (align-items: flex-start) so the digit's
-   *   top portion fills the visible half and the bottom is clipped.
-   *   Lower panels: text pinned to BOTTOM (align-items: flex-end) so the digit's
-   *   bottom portion fills the visible half and the top is clipped.
-   */
-  /* Static upper — shows NEW value */
-  .flip-card .fc-upper {
-    top: 0; height: 50%;
-    align-items: flex-start;
-    z-index: 2; border-radius: 3px 3px 0 0;
-  }
-  /* Static lower — shows OLD value */
-  .flip-card .fc-lower {
-    bottom: 0; height: 50%;
-    align-items: flex-end;
-    z-index: 2; border-radius: 0 0 3px 3px;
-  }
-  /* Animated top flap — OLD value, folds DOWN (rotateX 0 → -90°) */
-  .flip-card .fc-fa {
-    top: 0; height: 50%;
-    align-items: flex-start;
-    z-index: 4; border-radius: 3px 3px 0 0;
-    transform-origin: center bottom;
-    backface-visibility: hidden;
-    /* default: flat (visible, covering fc-upper) */
-  }
-  /* Animated bottom flap — NEW value, folds IN (rotateX 90° → 0) */
-  .flip-card .fc-fb {
-    bottom: 0; height: 50%;
-    align-items: flex-end;
-    z-index: 3; border-radius: 0 0 3px 3px;
-    transform-origin: center top;
-    backface-visibility: hidden;
-    transform: rotateX(90deg); /* starts perpendicular = invisible */
-  }
-  /* Centre fold line */
-  .flip-card::after {
-    content: ''; position: absolute; left: 0; right: 0;
-    top: calc(50% - 1px); height: 2px;
-    background: #000; z-index: 10; pointer-events: none;
-  }
-  @keyframes fcFoldA {
-    from { transform: rotateX(0deg);   }
-    to   { transform: rotateX(-90deg); }
-  }
-  @keyframes fcFoldB {
-    from { transform: rotateX(90deg); }
-    to   { transform: rotateX(0deg);  }
-  }
-  /* Only animate when .flipping class is present */
-  .flip-card.flipping .fc-fa { animation: fcFoldA 0.22s ease-in  forwards; }
-  .flip-card.flipping .fc-fb { animation: fcFoldB 0.22s ease-out 0.22s forwards; }
+  .flip-card.flipping .fc-face { animation: fcFlip 0.38s cubic-bezier(0.4,0,0.2,1) both; }
 
-  /* ── Email signup — streetwear ── */
+  /* ── Email signup — minimal ── */
   #email-bar {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    z-index: 50; display: flex; align-items: stretch;
-    background: #000;
-    border: 2px solid #fff;
-    border-radius: 0;
-    box-shadow: 5px 5px 0 #fff;
-    overflow: visible;
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    z-index: 50; display: flex; align-items: center;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 40px;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    padding: 3px 3px 3px 22px;
   }
   #email-bar input {
-    background: #000; border: none; outline: none;
-    color: #fff; font-size: 9px; font-weight: 700;
-    letter-spacing: 0.20em; text-transform: uppercase;
-    padding: 14px 20px; width: 230px;
-    font-family: 'Orbitron', system-ui, sans-serif;
+    background: transparent; border: none; outline: none;
+    color: rgba(255,255,255,0.78); font-size: 12px; font-weight: 300;
+    letter-spacing: 0.01em;
+    padding: 10px 0; width: 230px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
-  #email-bar input::placeholder { color: rgba(255,255,255,0.28); }
+  #email-bar input::placeholder { color: rgba(255,255,255,0.22); }
   #email-bar button {
-    background: #fff; color: #000;
-    border: none; border-left: 2px solid #fff;
+    background: rgba(255,255,255,0.88); color: #000;
+    border: none; border-radius: 36px;
     cursor: pointer;
-    font-size: 9px; font-weight: 900; letter-spacing: 0.22em;
-    text-transform: uppercase; padding: 14px 22px;
-    font-family: 'Orbitron', system-ui, sans-serif;
-    transition: background 0.12s, color 0.12s;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.03em;
+    padding: 11px 20px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    transition: background 0.15s;
     white-space: nowrap;
   }
-  #email-bar button:hover { background: #000; color: #fff; }
-  #email-bar.success button { background: #111; color: rgba(255,255,255,0.30); cursor: default; }
-  #email-bar.success input  { color: rgba(255,255,255,0.30); pointer-events: none; }
+  #email-bar button:hover { background: #fff; }
 
   @keyframes barCollapse {
     0%   { transform: translateX(-50%) scaleX(1)    scaleY(1);   opacity: 1; }
@@ -221,7 +167,7 @@
   }
   #locked-in img {
     max-height: 160px; max-width: 260px;
-    border: 2px solid #fff;
+    border: none;
     display: block;
   }
   #locked-in span {
@@ -242,42 +188,22 @@
   <div class="cd-label">Next Drop</div>
   <div class="cd-timer">
     <div class="flip-unit">
-      <div class="flip-card" id="fc-d">
-        <div class="fc-upper" id="fc-d-upper">--</div>
-        <div class="fc-lower" id="fc-d-lower">--</div>
-        <div class="fc-fa"    id="fc-d-fa">--</div>
-        <div class="fc-fb"    id="fc-d-fb">--</div>
-      </div>
+      <div class="flip-card" id="fc-d"><div class="fc-face">--</div></div>
       <small>Days</small>
     </div>
-    <div class="cd-sep">:</div>
+    <span class="cd-sep">:</span>
     <div class="flip-unit">
-      <div class="flip-card" id="fc-h">
-        <div class="fc-upper" id="fc-h-upper">--</div>
-        <div class="fc-lower" id="fc-h-lower">--</div>
-        <div class="fc-fa"    id="fc-h-fa">--</div>
-        <div class="fc-fb"    id="fc-h-fb">--</div>
-      </div>
+      <div class="flip-card" id="fc-h"><div class="fc-face">--</div></div>
       <small>Hrs</small>
     </div>
-    <div class="cd-sep">:</div>
+    <span class="cd-sep">:</span>
     <div class="flip-unit">
-      <div class="flip-card" id="fc-m">
-        <div class="fc-upper" id="fc-m-upper">--</div>
-        <div class="fc-lower" id="fc-m-lower">--</div>
-        <div class="fc-fa"    id="fc-m-fa">--</div>
-        <div class="fc-fb"    id="fc-m-fb">--</div>
-      </div>
+      <div class="flip-card" id="fc-m"><div class="fc-face">--</div></div>
       <small>Min</small>
     </div>
-    <div class="cd-sep">:</div>
+    <span class="cd-sep">:</span>
     <div class="flip-unit">
-      <div class="flip-card" id="fc-s">
-        <div class="fc-upper" id="fc-s-upper">--</div>
-        <div class="fc-lower" id="fc-s-lower">--</div>
-        <div class="fc-fa"    id="fc-s-fa">--</div>
-        <div class="fc-fb"    id="fc-s-fb">--</div>
-      </div>
+      <div class="flip-card" id="fc-s"><div class="fc-face">--</div></div>
       <small>Sec</small>
     </div>
   </div>
@@ -285,7 +211,7 @@
 
 <form id="email-bar" autocomplete="off">
   <input type="email" id="email-input" placeholder="Enter your email for early access" required />
-  <button type="submit">Notify Me</button>
+  <button type="submit">LOCK IN</button>
 </form>
 
 <div id="locked-in">
@@ -323,12 +249,12 @@ const isMobile = innerWidth < 768;
 const TARGETS = {
   // phrase = "I was never here" in local language (tooltip + ALT compass text)
   // saw    = "IF YOU SAW ME"    in local language (PRIMARY compass text when landed)
-  FRA: { name: 'France',         phrase: "Je n'étais jamais ici",   saw: "Si tu m'as vu",    lat: 46.60, lon:   2.35 },
+  FRA: { name: 'France',         phrase: "Je n'étais jamais ici",   saw: "SI TU M'AS VU",    lat: 46.60, lon:   2.35 },
   ARE: { name: 'UAE (Dubai)',     phrase: 'لم أكن هنا أبداً',        saw: 'إن رأيتني',       lat: 25.28, lon:  55.30 },
-  GBR: { name: 'United Kingdom', phrase: 'I was never here',        saw: 'If you saw me',   lat: 51.51, lon:  -0.13 },
-  ZAF: { name: 'South Africa',   phrase: 'Angikaze ngibe lapha',    saw: 'Uma ungibonile',  lat:-26.20, lon:  28.00 },
-  NGA: { name: 'Nigeria',        phrase: "Mi ò wà níbí rárá",        saw: 'Tí o bá rí mi',   lat:  9.08, lon:   8.68 },
-  USA: { name: 'New York, USA',  phrase: 'Never touched down here', saw: 'If you saw me',   lat: 40.71, lon: -74.01 },
+  GBR: { name: 'United Kingdom', phrase: 'I WAS NEVER HERE',        saw: 'IF YOU SAW ME',   lat: 51.51, lon:  -0.13 },
+  ZAF: { name: 'South Africa',   phrase: 'Angikaze ngibe lapha',    saw: 'UMA UNGIBONILE',  lat:-26.20, lon:  28.00 },
+  NGA: { name: 'Nigeria',        phrase: "Mi ò wà níbí rárá",        saw: 'TÍ O BÁ RÍ MI',   lat:  9.08, lon:   8.68 },
+  USA: { name: 'New York, USA',  phrase: 'I WAS NEVER HERE', saw: 'IF YOU SAW ME',   lat: 40.71, lon: -74.01 },
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -968,56 +894,33 @@ async function init() {
   }
 
   // ── Flip Clock ──────────────────────────────────────────────────
-  // Structure per digit:
-  //   fc-upper  — static top half, shows NEW value (revealed as fc-fa folds away)
-  //   fc-lower  — static bottom half, shows OLD value (covered as fc-fb folds in)
-  //   fc-fa     — animated top flap: OLD value, rotates 0→ -90° (folds away downward)
-  //   fc-fb     — animated bottom flap: NEW value, rotates 90°→ 0 (folds in from behind)
-  // CSS animations override inline transforms while .flipping class is active.
-  const DROP_DATE   = new Date('2026-03-29T00:00:00').getTime();
-  const flipTimers  = {};
+  // Each card has one .fc-face element. The flip animation rotates the card
+  // face out (rotateX -90°), we update the text at the invisible midpoint,
+  // then the card rotates back. No duplicate panels — no duplicate display.
+  const DROP_DATE = new Date('2026-03-29T00:00:00').getTime();
+  const fcValues  = { d: null, h: null, m: null, s: null };
+  const fcTimers  = {};
 
   function flipTo(key, newVal) {
-    const card  = document.getElementById('fc-' + key);
-    const upper = document.getElementById('fc-' + key + '-upper');
-    const lower = document.getElementById('fc-' + key + '-lower');
-    const fa    = document.getElementById('fc-' + key + '-fa');
-    const fb    = document.getElementById('fc-' + key + '-fb');
-    if (!card || !upper) return;
+    if (fcValues[key] === newVal) return;
+    const card = document.getElementById('fc-' + key);
+    const face = card?.querySelector('.fc-face');
+    if (!card || !face) return;
 
-    const oldVal = upper.textContent;
-    if (oldVal === newVal) return;
-
-    // If a previous flip is still settling, cancel it and finalise immediately
-    if (flipTimers[key]) {
-      clearTimeout(flipTimers[key]);
-      flipTimers[key] = null;
-      card.classList.remove('flipping');
-      lower.textContent  = oldVal; // sync lower to what upper already shows
-      fb.style.transform = 'rotateX(90deg)';
-    }
-
-    // Set up panels for new flip
-    upper.textContent  = newVal;          // top half behind the flap: new value
-    lower.textContent  = oldVal;          // bottom half: still showing old
-    fa.textContent     = oldVal;          // top flap being folded away: old
-    fb.textContent     = newVal;          // bottom flap folding in: new
-    fa.style.transform = 'rotateX(0deg)'; // ensure fa starts flat
-    fb.style.transform = 'rotateX(90deg)';// ensure fb starts hidden
+    if (fcTimers[key]) { clearTimeout(fcTimers[key]); fcTimers[key] = null; }
 
     card.classList.remove('flipping');
-    void card.offsetWidth; // force reflow so animation restarts cleanly
+    void card.offsetWidth; // reflow so animation restarts cleanly
     card.classList.add('flipping');
 
-    flipTimers[key] = setTimeout(() => {
-      flipTimers[key] = null;
-      card.classList.remove('flipping');
-      lower.textContent  = newVal;          // sync lower to new value
-      fb.style.transform = 'rotateX(90deg)'; // reset fb to hidden for next flip
-    }, 540);
+    // At 40% (160ms) the card is fully edge-on and invisible — safe to swap text
+    fcTimers[key] = setTimeout(() => {
+      face.textContent = newVal;
+      fcValues[key]    = newVal;
+      fcTimers[key]    = null;
+    }, 152);
   }
 
-  // Initialise all panels with the current countdown value
   function initFlipClock() {
     const diff = Math.max(0, DROP_DATE - Date.now());
     const vals = {
@@ -1027,15 +930,8 @@ async function init() {
       s: String(Math.floor((diff % 60000)    / 1000)).padStart(2, '0'),
     };
     ['d','h','m','s'].forEach(k => {
-      ['upper','lower','fa'].forEach(part => {
-        const el = document.getElementById('fc-' + k + '-' + part);
-        if (el) el.textContent = vals[k];
-      });
-      const fb = document.getElementById('fc-' + k + '-fb');
-      if (fb) {
-        fb.textContent     = vals[k];
-        fb.style.transform = 'rotateX(90deg)'; // hidden at rest
-      }
+      const face = document.querySelector('#fc-' + k + ' .fc-face');
+      if (face) { face.textContent = vals[k]; fcValues[k] = vals[k]; }
     });
   }
 
@@ -1048,7 +944,6 @@ async function init() {
   }
 
   initFlipClock();
-  updateFlipClock();
   setInterval(updateFlipClock, 1000);
 
   // Auto-fly to a random country after 4 seconds
@@ -1114,7 +1009,7 @@ init().catch(err => {
 })();
 </script>
 
-<!-- Compass text overlay: IF YOU SAW ME at N/E/S/W, scramble on hover, fade on drag -->
+<!-- Compass text overlay: curved arc labels, transition on landing only -->
 <script>
 (function () {
   'use strict';
@@ -1122,27 +1017,34 @@ init().catch(err => {
   const ctx    = canvas.getContext('2d');
   const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ@#!?/\\|';
 
-  // Resolve which PRIMARY/ALT text to use based on the currently landed country
-  function getTexts() {
+  const DEFAULT_PRIMARY = 'IF YOU SAW ME';
+  const DEFAULT_ALT     = 'I WAS NEVER HERE';
+
+  // 4 independent labels — [0] North PRIMARY, [1] South ALT, [2] East PRIMARY, [3] West ALT
+  function makeLabel(text) { return { display: text, target: text, progress: 1 }; }
+  const north = makeLabel(DEFAULT_PRIMARY);
+  const south = makeLabel(DEFAULT_ALT);
+  const east  = makeLabel(DEFAULT_PRIMARY);
+  const west  = makeLabel(DEFAULT_ALT);
+
+  let lastLandedISO = null;
+  let globalAlpha   = 1;
+  let isDragging    = false;
+
+  // Trigger scramble when plane LANDS at a new country
+  function onLand(iso) {
     const g   = window.__globe;
-    const iso = window.__landedISO;
-    if (iso && g && g.TARGETS && g.TARGETS[iso]) {
-      return { primary: g.TARGETS[iso].saw, alt: g.TARGETS[iso].phrase };
+    const tgt = (g && g.TARGETS && g.TARGETS[iso]) ? g.TARGETS[iso] : null;
+    const newPrimary = tgt?.saw    || DEFAULT_PRIMARY;
+    const newAlt     = tgt?.phrase || DEFAULT_ALT;
+    for (const s of [north, east]) {
+      if (s.target !== newPrimary) { s.target = newPrimary; s.progress = 0; }
     }
-    return { primary: 'IF YOU SAW ME', alt: 'I WAS NEVER THERE' };
+    for (const s of [south, west]) {
+      if (s.target !== newAlt) { s.target = newAlt; s.progress = 0; }
+    }
   }
 
-  // 4 compass labels (N, S, E, W) — each tracks its own scramble state
-  const labels = Array.from({ length: 4 }, () => ({
-    display:  'IF YOU SAW ME',
-    target:   'IF YOU SAW ME',
-    progress: 1,
-  }));
-
-  let globalAlpha = 1;
-  let isDragging  = false;
-
-  // Hook OrbitControls drag events to fade the overlay
   (function hookControls() {
     const g = window.__globe;
     if (!g || !g.controls) { setTimeout(hookControls, 120); return; }
@@ -1150,47 +1052,80 @@ init().catch(err => {
     g.controls.addEventListener('end',   () => { isDragging = false; });
   })();
 
-  function resize() {
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
   resize();
   window.addEventListener('resize', resize, { passive: true });
 
-  // Accurate silhouette screen-radius of the globe, accounting for zoom
   function getGlobeScreenR() {
     const g = window.__globe;
     if (!g || !g.camera) return canvas.height * 0.42;
-    const cam = g.camera;
-    const ctl = g.controls;
-    const tx  = ctl ? ctl.target.x : 0;
-    const ty  = ctl ? ctl.target.y : 0;
-    const tz  = ctl ? ctl.target.z : 0;
-    const D   = Math.sqrt(
-      (cam.position.x - tx) ** 2 +
-      (cam.position.y - ty) ** 2 +
-      (cam.position.z - tz) ** 2
-    );
+    const cam = g.camera, ctl = g.controls;
+    const tx = ctl?.target.x ?? 0, ty = ctl?.target.y ?? 0, tz = ctl?.target.z ?? 0;
+    const D = Math.sqrt((cam.position.x-tx)**2 + (cam.position.y-ty)**2 + (cam.position.z-tz)**2);
     const R = g.GLOBE_R;
     if (D <= R) return canvas.height * 0.42;
     const focal = (canvas.height / 2) / Math.tan(cam.fov * Math.PI / 360);
     return focal * R / Math.sqrt(D * D - R * R);
   }
 
-  // Advance a label's scramble toward its target
   function tickScramble(s, dt) {
     if (s.progress >= 1 && s.display === s.target) return;
-    s.progress = Math.min(1, s.progress + dt * 2.8);
+    s.progress = Math.min(1, s.progress + dt * 2.4);
     const tgt = s.target;
-    let   out = '';
+    let out = '';
     for (let i = 0; i < tgt.length; i++) {
       if (tgt[i] === ' ') { out += ' '; continue; }
-      out += (s.progress > i / tgt.length)
+      out += s.progress > i / tgt.length
         ? tgt[i]
         : GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
     }
     s.display = out;
     if (s.progress >= 1) s.display = tgt;
+  }
+
+  /**
+   * Draw text curved along a circular arc of radius `arcR`.
+   *
+   * Placement math (canvas y-axis points DOWN):
+   *   top    — center angle -π/2, traverse left→right (increasing θ), rot = θ + π/2
+   *   bottom — center angle +π/2, traverse right→left (decreasing θ), rot = θ - π/2
+   *   right  — center angle  0,   traverse top→bottom (increasing θ), rot = θ + π/2
+   *   left   — center angle  π,   traverse bottom→top (increasing θ), rot = θ + π/2
+   *
+   * At the center of each placement the rotation simplifies to 0 (upright) for
+   * top/bottom and ±π/2 for left/right — identical to the original straight labels
+   * but now each character tilts slightly to follow the arc.
+   */
+  function drawArcText(text, cx, cy, arcR, placement) {
+    if (!text) return;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    const chars  = [...text];
+    const widths = chars.map(c => ctx.measureText(c).width);
+    const totalW = widths.reduce((a, b) => a + b, 0);
+    const span   = totalW / arcR; // arc angle subtended by the full string
+
+    const PLACES = {
+      top:    { center: -Math.PI / 2, dir:  1, rotFn: a =>  a + Math.PI / 2 },
+      bottom: { center:  Math.PI / 2, dir: -1, rotFn: a =>  a - Math.PI / 2 },
+      right:  { center:  0,           dir:  1, rotFn: a =>  a + Math.PI / 2 },
+      left:   { center:  Math.PI,     dir:  1, rotFn: a =>  a + Math.PI / 2 },
+    };
+    const { center, dir, rotFn } = PLACES[placement];
+    const aStart = center - (span / 2) * dir;
+
+    let cum = 0;
+    chars.forEach((ch, i) => {
+      const cw = widths[i];
+      if (ch === ' ') { cum += cw; return; }
+      const a = aStart + dir * (cum + cw / 2) / arcR;
+      ctx.save();
+      ctx.translate(cx + arcR * Math.cos(a), cy + arcR * Math.sin(a));
+      ctx.rotate(rotFn(a));
+      ctx.fillText(ch, 0, 0);
+      ctx.restore();
+      cum += cw;
+    });
   }
 
   let prevTime = 0;
@@ -1199,58 +1134,38 @@ init().catch(err => {
     const dt = Math.min((ts - prevTime) / 1000, 0.1);
     prevTime = ts;
 
+    // Detect new landing and trigger scramble
+    const landedISO = window.__landedISO;
+    if (landedISO !== lastLandedISO) {
+      lastLandedISO = landedISO;
+      if (landedISO) onLand(landedISO);
+    }
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     globalAlpha += ((isDragging ? 0 : 1) - globalAlpha) * Math.min(1, dt * 5);
     if (globalAlpha < 0.01) return;
 
-    // Pick texts: hover on a country → show ALT, otherwise PRIMARY
-    const texts       = getTexts();
-    const wantedLabel = window.__hoveredISO ? texts.alt : texts.primary;
-    labels.forEach(s => {
-      if (s.target !== wantedLabel) { s.target = wantedLabel; s.progress = 0; }
-      tickScramble(s, dt);
-    });
+    // Tick all 4 labels independently
+    for (const s of [north, south, east, west]) tickScramble(s, dt);
 
-    const sR  = getGlobeScreenR();
-    const GAP = 30;
-    const pcx = canvas.width  / 2;
-    const pcy = canvas.height / 2;
-    const fs  = Math.max(9, Math.round(Math.min(canvas.width, canvas.height) * 0.013));
+    const sR   = getGlobeScreenR();
+    const GAP  = 28;
+    const arcR = sR + GAP;
+    const pcx  = canvas.width  / 2;
+    const pcy  = canvas.height / 2;
+    const fs   = Math.max(8, Math.round(Math.min(canvas.width, canvas.height) * 0.012));
 
     ctx.save();
     ctx.globalAlpha  = globalAlpha;
-    ctx.font         = `900 ${fs}px 'Orbitron', monospace`;
-    ctx.fillStyle    = 'rgba(255,255,255,0.75)';
-    ctx.textAlign    = 'center';
-    ctx.textBaseline = 'middle';
-    try { ctx.letterSpacing = '4px'; } catch (_) {}
+    ctx.font         = `700 ${fs}px 'Orbitron', monospace`;
+    ctx.fillStyle    = 'rgba(255,255,255,0.65)';
+    try { ctx.letterSpacing = '3px'; } catch (_) {}
 
-    // North — horizontal, above globe
-    ctx.save();
-    ctx.translate(pcx, pcy - sR - GAP);
-    ctx.fillText(labels[0].display, 0, 0);
-    ctx.restore();
-
-    // South — horizontal, below globe
-    ctx.save();
-    ctx.translate(pcx, pcy + sR + GAP);
-    ctx.fillText(labels[1].display, 0, 0);
-    ctx.restore();
-
-    // East — rotated 90° CW, text reads top-to-bottom
-    ctx.save();
-    ctx.translate(pcx + sR + GAP, pcy);
-    ctx.rotate(Math.PI / 2);
-    ctx.fillText(labels[2].display, 0, 0);
-    ctx.restore();
-
-    // West — rotated 90° CCW, text reads bottom-to-top
-    ctx.save();
-    ctx.translate(pcx - sR - GAP, pcy);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText(labels[3].display, 0, 0);
-    ctx.restore();
+    drawArcText(north.display, pcx, pcy, arcR, 'top');
+    drawArcText(south.display, pcx, pcy, arcR, 'bottom');
+    drawArcText(east.display,  pcx, pcy, arcR, 'right');
+    drawArcText(west.display,  pcx, pcy, arcR, 'left');
 
     ctx.restore();
   }
