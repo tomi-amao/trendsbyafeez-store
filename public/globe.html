@@ -524,7 +524,7 @@ scene.add(plane);
 
 {
   const loader = new GLTFLoader();
-  loader.load('./plane.glb', (gltf) => {
+  loader.load('./jet.glb', (gltf) => {
     const model = gltf.scene;
     // glTF spec: -Z is forward, which matches Three.js lookAt's -Z target axis.
     // No Y rotation needed — nose already aligns with the flight direction.
