@@ -33,6 +33,7 @@ export default async function handleRequest(
       "'wasm-unsafe-eval'",
       'https://cdn.shopify.com',
       'https://shopify.com',
+      'https://cdn.jsdelivr.net',
     ],
     workerSrc: ["'self'", 'blob:'],
   });
