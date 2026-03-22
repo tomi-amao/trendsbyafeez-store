@@ -1,3 +1,4 @@
+import {useState, useEffect} from 'react';
 import {Analytics, getShopAnalytics, useNonce} from '@shopify/hydrogen';
 import {
   Outlet,
@@ -9,6 +10,7 @@ import {
   Scripts,
   ScrollRestoration,
   useRouteLoaderData,
+  Link,
 } from 'react-router';
 import type {Route} from './+types/root';
 import favicon from '~/assets/favicon.svg';
@@ -18,6 +20,7 @@ import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import tailwindCss from './styles/tailwind.css?url';
 import {PageLayout} from './components/PageLayout';
+import {CookieBanner} from './components/CookieBanner';
 
 export type RootLoader = typeof loader;
 
@@ -199,31 +202,81 @@ export default function App() {
       <PageLayout {...data}>
         <Outlet />
       </PageLayout>
+      <CookieBanner />
     </Analytics.Provider>
   );
 }
 
+/* ─── Glyph Title — 404 scramble animation ────────────────────── */
+function GlyphTitle() {
+  const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ@#!?/\\|';
+  const FROM = 'I WAS NEVER HERE';
+  const TO = 'PAGE NOT FOUND';
+  const SPEED = 2.4;
+
+  const [display, setDisplay] = useState(FROM);
+
+  useEffect(() => {
+    let progress = 0;
+    let lastTime = 0;
+    let raf: number;
+
+    const rand = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+
+    function tick(now: number) {
+      if (lastTime === 0) lastTime = now;
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+      progress = Math.min(1, progress + dt * SPEED);
+      let out = '';
+      for (let i = 0; i < TO.length; i++) {
+        if (TO[i] === ' ') { out += '\u2002'; continue; }
+        out += progress > i / TO.length ? TO[i] : rand();
+      }
+      setDisplay(out);
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    }
+
+    const timer = setTimeout(() => {
+      raf = requestAnimationFrame(tick);
+    }, 1000);
+    return () => { clearTimeout(timer); cancelAnimationFrame(raf); };
+  }, []);
+
+  return <>{display}</>; 
+}
+
 export function ErrorBoundary() {
   const error = useRouteError();
-  let errorMessage = 'Unknown error';
   let errorStatus = 500;
 
   if (isRouteErrorResponse(error)) {
-    errorMessage = error?.data?.message ?? error.data;
     errorStatus = error.status;
-  } else if (error instanceof Error) {
-    errorMessage = error.message;
+  }
+
+  if (errorStatus === 404) {
+    return (
+      <div className="page-404">
+        <span className="page-404__bg-num" aria-hidden="true">404</span>
+        <p className="page-404__eyebrow">Error 404</p>
+        <h1 className="page-404__title"><GlyphTitle /></h1>
+        <p className="page-404__body">
+          The page you&apos;re looking for doesn&apos;t exist or may have been
+          moved. Check the URL or head back to explore.
+        </p>
+        <nav className="page-404__actions" aria-label="Recovery navigation">
+          <Link to="/" className="page-404__link">Go Home</Link>
+          <Link to="/collections" className="page-404__link page-404__link--ghost">Shop All</Link>
+          <Link to="/pages/gallery" className="page-404__link page-404__link--ghost">Gallery</Link>
+        </nav>
+      </div>
+    );
   }
 
   return (
     <div className="route-error">
       <h1>Oops</h1>
       <h2>{errorStatus}</h2>
-      {errorMessage && (
-        <fieldset>
-          <pre>{errorMessage}</pre>
-        </fieldset>
-      )}
     </div>
   );
 }

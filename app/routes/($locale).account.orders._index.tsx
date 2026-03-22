@@ -94,11 +94,10 @@ function OrdersTable({
 
 function EmptyOrders({hasFilters = false}: {hasFilters?: boolean}) {
   return (
-    <div>
+    <div className="account-empty">
       {hasFilters ? (
         <>
           <p>No orders found matching your search.</p>
-          <br />
           <p>
             <Link to="/account/orders">Clear filters →</Link>
           </p>
@@ -106,7 +105,6 @@ function EmptyOrders({hasFilters = false}: {hasFilters?: boolean}) {
       ) : (
         <>
           <p>You haven&apos;t placed any orders yet.</p>
-          <br />
           <p>
             <Link to="/collections">Start Shopping →</Link>
           </p>
@@ -202,21 +200,39 @@ function OrderSearchForm({
 function OrderItem({order}: {order: OrderItemFragment}) {
   const fulfillmentStatus = flattenConnection(order.fulfillments)[0]?.status;
   return (
-    <>
-      <fieldset>
-        <Link to={`/account/orders/${btoa(order.id)}`}>
-          <strong>#{order.number}</strong>
-        </Link>
-        <p>{new Date(order.processedAt).toDateString()}</p>
-        {order.confirmationNumber && (
-          <p>Confirmation: {order.confirmationNumber}</p>
-        )}
-        <p>{order.financialStatus}</p>
-        {fulfillmentStatus && <p>{fulfillmentStatus}</p>}
+    <div className="account-order-item">
+      <div className="account-order-item__info">
+        <div className="account-order-item__header">
+          <span className="account-order-item__num">#{order.number}</span>
+          <span className="account-order-item__date">
+            {new Date(order.processedAt).toDateString()}
+          </span>
+        </div>
+        <div className="account-order-item__meta">
+          {order.confirmationNumber && (
+            <span>Conf&nbsp;{order.confirmationNumber}</span>
+          )}
+          {order.financialStatus && (
+            <span className="account-order-item__badge">
+              {order.financialStatus}
+            </span>
+          )}
+          {fulfillmentStatus && (
+            <span className="account-order-item__badge account-order-item__badge--fulfillment">
+              {fulfillmentStatus}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="account-order-item__aside">
         <Money data={order.totalPrice} />
-        <Link to={`/account/orders/${btoa(order.id)}`}>View Order →</Link>
-      </fieldset>
-      <br />
-    </>
+        <Link
+          to={`/account/orders/${btoa(order.id)}`}
+          className="account-order-item__link"
+        >
+          View Order →
+        </Link>
+      </div>
+    </div>
   );
 }
