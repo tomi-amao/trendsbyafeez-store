@@ -165,7 +165,7 @@ export default function Collection() {
     )?.label ?? 'Featured';
 
   return (
-    <div className="collection">
+    <div className="">
       {/* Collection Header */}
       {/* <div className="collection-header">
         {collection.image && (

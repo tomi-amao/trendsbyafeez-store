@@ -45,15 +45,15 @@ export default function Policy() {
   const {policy} = useLoaderData<typeof loader>();
 
   return (
-    <div className="policy">
-      <br />
-      <br />
-      <div>
-        <Link to="/policies">← Back to Policies</Link>
-      </div>
-      <br />
-      <h1>{policy.title}</h1>
-      <div dangerouslySetInnerHTML={{__html: policy.body}} />
+    <div className="shopify-policy">
+      <Link to="/policies" className="shopify-policy__back" prefetch="intent">
+        ← All Policies
+      </Link>
+      <h1 className="shopify-policy__title">{policy.title}</h1>
+      <div
+        className="shopify-policy__body"
+        dangerouslySetInnerHTML={{__html: policy.body}}
+      />
     </div>
   );
 }

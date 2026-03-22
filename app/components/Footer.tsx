@@ -9,7 +9,7 @@ interface FooterProps {
 }
 
 function MarqueeDivider() {
-  const text = 'IF YOU SAW ME \u00B7 I WAS NEVER THERE \u00B7 ';
+  const text = 'IF YOU SAW ME \u00B7 I WAS NEVER HERE \u00B7 ';
   return (
     <div className="marquee-divider" aria-hidden="true">
       <div className="marquee-divider__track">
@@ -89,8 +89,38 @@ export function Footer({
                     </NavLink>
                   </li>
                   <li>
+                    <NavLink prefetch="intent" to="/pages/contact">
+                      Contact
+                    </NavLink>
+                  </li>
+                  <li>
                     <NavLink prefetch="intent" to="/account">
                       Account
+                    </NavLink>
+                  </li>
+                </ul>
+              </div>
+              <div className="footer__col">
+                <h3>Legal</h3>
+                <ul>
+                  <li>
+                    <NavLink prefetch="intent" to="/policies/privacy-policy">
+                      Privacy Policy
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink prefetch="intent" to="/pages/cookie-policy">
+                      Cookie Policy
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink prefetch="intent" to="/policies/terms-of-service">
+                      Terms of Service
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink prefetch="intent" to="/policies/refund-policy">
+                      Refund Policy
                     </NavLink>
                   </li>
                 </ul>
@@ -103,6 +133,17 @@ export function Footer({
                 &copy; {new Date().getFullYear()} {header.shop.name}. All rights
                 reserved.
               </span>
+              <div className="footer__bottom-links">
+                <NavLink prefetch="intent" to="/policies/privacy-policy">
+                  Privacy
+                </NavLink>
+                <NavLink prefetch="intent" to="/pages/cookie-policy">
+                  Cookies
+                </NavLink>
+                <NavLink prefetch="intent" to="/pages/contact">
+                  Contact
+                </NavLink>
+              </div>
             </div>
           </footer>
         )}
