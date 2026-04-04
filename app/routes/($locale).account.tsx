@@ -68,12 +68,12 @@ function AccountMenu() {
       <NavLink to="/account/orders" className={linkClass}>
         Orders
       </NavLink>
-      <NavLink to="/account/profile" className={linkClass}>
+      {/* <NavLink to="/account/profile" className={linkClass}>
         Profile
       </NavLink>
       <NavLink to="/account/addresses" className={linkClass}>
         Addresses
-      </NavLink>
+      </NavLink> */}
       <Logout />
     </nav>
   );

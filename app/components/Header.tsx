@@ -279,7 +279,7 @@ function MobileMenuToggle() {
   const {open} = useAside();
   return (
     <button className="header__icon-btn header__mobile-toggle" onClick={() => open('mobile')} aria-label="Open menu">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="15" x2="17" y2="15"/></svg>
+      <svg width="28" height="28" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="15" x2="17" y2="15"/></svg>
     </button>
   );
 }
@@ -288,7 +288,7 @@ function SearchToggle() {
   const {open} = useAside();
   return (
     <button className="header__icon-btn" onClick={() => open('search')} aria-label="Search">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="9" cy="9" r="5.5"/><line x1="13.5" y1="13.5" x2="17" y2="17"/></svg>
+      <svg width="28" height="28" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="9" cy="9" r="5.5"/><line x1="13.5" y1="13.5" x2="17" y2="17"/></svg>
     </button>
   );
 }
@@ -298,7 +298,7 @@ function CartBadge({count}: {count: number}) {
   const {publish, shop, cart, prevCart} = useAnalytics();
   return (
     <button className="header__icon-btn" onClick={() => { open('cart'); publish('cart_viewed', {cart, prevCart, shop, url: window.location.href || ''} as CartViewPayload); }} aria-label={`Cart (${count} items)`}>
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M5 7h10l-1 8H6L5 7z"/><path d="M8 7V5a2 2 0 0 1 4 0v2"/></svg>
+      <svg width="28" height="28" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M5 7h10l-1 8H6L5 7z"/><path d="M8 7V5a2 2 0 0 1 4 0v2"/></svg>
       {count > 0 && <span className="header__cart-count">{count}</span>}
     </button>
   );
@@ -410,9 +410,9 @@ export function HeaderMenu({
             </NavLink>
           );
         })}
-        <NavLink end onClick={close} prefetch="intent" to="/account">
+        {/* <NavLink end onClick={close} prefetch="intent" to="/account">
           Account
-        </NavLink>
+        </NavLink> */}
       </nav>
     );
   }
