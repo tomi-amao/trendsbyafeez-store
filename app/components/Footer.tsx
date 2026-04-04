@@ -10,10 +10,12 @@ interface FooterProps {
 
 function MarqueeDivider() {
   const text = 'IF YOU SAW ME \u00B7 I WAS NEVER HERE \u00B7 ';
+  const repeated = Array(6).fill(text).join('');
   return (
     <div className="marquee-divider" aria-hidden="true">
       <div className="marquee-divider__track">
-        <span className="marquee-divider__text">{text}{text}{text}{text}</span>
+        <span className="marquee-divider__text">{repeated}</span>
+        <span className="marquee-divider__text" aria-hidden="true">{repeated}</span>
       </div>
     </div>
   );
@@ -126,7 +128,7 @@ export function Footer({
                 </ul>
               </div>
             </div>
-      <MarqueeDivider />
+            <MarqueeDivider />
 
             <div className="footer__bottom">
               <span>

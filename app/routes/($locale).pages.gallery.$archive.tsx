@@ -35,7 +35,7 @@ interface Archive {
 /* Map slugs to their file prefix + display name */
 const ARCHIVE_CONFIG: Record<string, {prefix: string; name: string}> = {
   trendsbyfaces: {prefix: 'TRENDSBYFACES_', name: 'TrendsByFaces'},
-  incognito: {prefix: 'INCOGNITO_', name: 'Incognito'},
+  incognito: {prefix: 'ARCHIVE_INCOGNITO_', name: 'Incognito'},
 };
 
 /* ─── TRENDSBYFACES group helpers ────────────────────────────────── */
