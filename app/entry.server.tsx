@@ -62,6 +62,11 @@ export default async function handleRequest(
 
   responseHeaders.set('Content-Type', 'text/html');
   responseHeaders.set('Content-Security-Policy', header);
+  responseHeaders.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  responseHeaders.set('X-Content-Type-Options', 'nosniff');
+  responseHeaders.set('X-Frame-Options', 'SAMEORIGIN');
+  responseHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  responseHeaders.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
   return new Response(body, {
     headers: responseHeaders,

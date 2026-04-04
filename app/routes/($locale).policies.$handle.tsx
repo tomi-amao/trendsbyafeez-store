@@ -30,6 +30,7 @@ export async function loader({params, context}: Route.LoaderArgs) {
       [policyName]: true,
       language: context.storefront.i18n?.language,
     },
+    cache: context.storefront.CacheLong(),
   });
 
   const policy = data.shop?.[policyName];

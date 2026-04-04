@@ -49,6 +49,7 @@ type ProductCardProduct =
 type ProductWithExtras = ProductCardProduct & {
   totalInventory?: number | null;
   images?: {nodes: QvImage[]} | null;
+  tags?: string[];
 };
 
 const LOW_STOCK_THRESHOLD = 5;
@@ -70,6 +71,11 @@ function getSecondImage(product: ProductCardProduct): QvImage | null {
   return nodes && nodes.length > 1 ? nodes[1] : null;
 }
 
+function isComingSoon(product: ProductCardProduct): boolean {
+  const p = product as ProductWithExtras;
+  return p.tags?.some((t) => t.toUpperCase() === 'COMING_SOON') ?? false;
+}
+
 export function ProductItem({
   product,
   loading,
@@ -81,6 +87,7 @@ export function ProductItem({
   const variantUrl = useVariantUrl(product.handle);
   const image = product.featuredImage;
   const available = getAvailability(product);
+  const comingSoon = isComingSoon(product);
   const inventory = getTotalInventory(product);
   const isLowStock = inventory !== null && inventory > 0 && inventory <= LOW_STOCK_THRESHOLD;
   const secondImage = getSecondImage(product);
@@ -108,7 +115,7 @@ export function ProductItem({
 
   return (
     <>
-      <div className={`product-card-wrapper${!available ? ' product-card-wrapper--sold-out' : ''}`}>
+      <div className={`product-card-wrapper${!available ? (comingSoon ? ' product-card-wrapper--coming-soon' : ' product-card-wrapper--sold-out') : ''}`}>
         {/* Image area with overlaid controls */}
         <div className="product-card__fig">
           <Link className="product-card" prefetch="intent" to={variantUrl} tabIndex={-1} aria-hidden="true">
@@ -134,8 +141,8 @@ export function ProductItem({
                 />
               )}
               {!available && (
-                <div className="product-card__sold-out-badge" aria-label="Sold out">
-                  <span>Sold Out</span>
+                <div className={`product-card__sold-out-badge${comingSoon ? ' product-card__sold-out-badge--coming-soon' : ''}`} aria-label={comingSoon ? 'Coming soon' : 'Sold out'}>
+                  <span>{comingSoon ? 'Coming Soon' : 'Sold Out'}</span>
                 </div>
               )}
               {/* {available && isLowStock && (
@@ -184,6 +191,7 @@ export function ProductItem({
             handle={product.handle}
             variantUrl={variantUrl}
             onClose={closeQuickView}
+            comingSoon={comingSoon}
           />,
           document.body,
         )}
@@ -196,10 +204,12 @@ function QuickViewPanel({
   handle,
   variantUrl,
   onClose,
+  comingSoon,
 }: {
   handle: string;
   variantUrl: string;
   onClose: () => void;
+  comingSoon: boolean;
 }) {
   const fetcher = useFetcher<{product: QuickViewProduct}>();
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
@@ -386,7 +396,7 @@ function QuickViewPanel({
                       className="quickview-panel__add-to-cart"
                       disabled={!isVariantAvailable || cartFetcher.state !== 'idle'}
                     >
-                      {isVariantAvailable ? 'Add to Bag' : 'Sold Out'}
+                      {isVariantAvailable ? 'Add to Bag' : (comingSoon ? 'Coming Soon' : 'Sold Out')}
                     </button>
                   )}
                 </CartForm>

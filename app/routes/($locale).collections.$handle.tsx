@@ -70,6 +70,7 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
         filters,
         ...paginationVariables,
       },
+      cache: storefront.CacheShort(),
     }),
   ]);
 
@@ -324,6 +325,7 @@ const PRODUCT_ITEM_FRAGMENT = `#graphql
     id
     handle
     title
+    tags
     availableForSale
     totalInventory
     featuredImage {
