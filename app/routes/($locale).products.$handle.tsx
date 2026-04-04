@@ -41,6 +41,7 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   const [{product}] = await Promise.all([
     storefront.query(PRODUCT_QUERY, {
       variables: {handle, selectedOptions: getSelectedProductOptions(request)},
+      cache: storefront.CacheShort(),
     }),
   ]);
 
@@ -55,7 +56,9 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
 
 function loadDeferredData({context}: Route.LoaderArgs) {
   const recommendedProducts = context.storefront
-    .query(RECOMMENDED_PRODUCTS_QUERY)
+    .query(RECOMMENDED_PRODUCTS_QUERY, {
+      cache: context.storefront.CacheShort(),
+    })
     .catch((error: Error) => {
       console.error(error);
       return null;
@@ -191,6 +194,7 @@ export default function Product() {
             productOptions={productOptions}
             selectedVariant={selectedVariant}
             onSizeChartClick={() => setSizeChartOpen(true)}
+            comingSoon={product.tags?.some((t: string) => t.toUpperCase() === 'COMING_SOON') ?? false}
           />
 
           {/* Horizontal Tabs (denimtears style) */}
@@ -375,6 +379,7 @@ const PRODUCT_FRAGMENT = `#graphql
     handle
     descriptionHtml
     description
+    tags
     encodedVariantExistence
     encodedVariantAvailability
     totalInventory
@@ -437,6 +442,7 @@ const RECOMMENDED_PRODUCTS_QUERY = `#graphql
     id
     title
     handle
+    tags
     availableForSale
     priceRange {
       minVariantPrice {

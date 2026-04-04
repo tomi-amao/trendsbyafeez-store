@@ -53,9 +53,8 @@ export async function getAdminAccessToken(
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(
-      `[ShopifyAdmin] Token exchange failed (HTTP ${res.status}): ${body.slice(0, 300)}`,
-    );
+    console.error(`[ShopifyAdmin] Token exchange failed (HTTP ${res.status}): ${body.slice(0, 300)}`);
+    throw new Error('[ShopifyAdmin] Token exchange failed');
   }
 
   const data = (await res.json()) as {

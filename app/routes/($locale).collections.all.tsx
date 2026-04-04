@@ -33,6 +33,7 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
         reverse,
         query,
       },
+      cache: storefront.CacheShort(),
     }),
   ]);
   return {products};
@@ -174,6 +175,7 @@ const COLLECTION_ITEM_FRAGMENT = `#graphql
     id
     handle
     title
+    tags
     availableForSale
     totalInventory
     featuredImage {

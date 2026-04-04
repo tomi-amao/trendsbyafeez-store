@@ -21,7 +21,9 @@ export async function loader(args: Route.LoaderArgs) {
 
 async function loadCriticalData({context}: Route.LoaderArgs) {
   const [{collections}] = await Promise.all([
-    context.storefront.query(FEATURED_COLLECTION_QUERY),
+    context.storefront.query(FEATURED_COLLECTION_QUERY, {
+      cache: context.storefront.CacheShort(),
+    }),
   ]);
 
   return {
@@ -32,7 +34,9 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
 
 function loadDeferredData({context}: Route.LoaderArgs) {
   const recommendedProducts = context.storefront
-    .query(RECOMMENDED_PRODUCTS_QUERY)
+    .query(RECOMMENDED_PRODUCTS_QUERY, {
+      cache: context.storefront.CacheShort(),
+    })
     .catch((error: Error) => {
       console.error(error);
       return null;
@@ -389,6 +393,7 @@ const RECOMMENDED_PRODUCTS_QUERY = `#graphql
     id
     title
     handle
+    tags
     availableForSale
     priceRange {
       minVariantPrice {

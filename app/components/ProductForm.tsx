@@ -12,10 +12,12 @@ export function ProductForm({
   productOptions,
   selectedVariant,
   onSizeChartClick,
+  comingSoon = false,
 }: {
   productOptions: MappedProductOptions[];
   selectedVariant: ProductFragment['selectedOrFirstAvailableVariant'];
   onSizeChartClick?: () => void;
+  comingSoon?: boolean;
 }) {
   const navigate = useNavigate();
   const {open} = useAside();
@@ -126,7 +128,9 @@ export function ProductForm({
           ? hasSizeSelected === false && sizeOption
             ? 'Select a size'
             : 'Add to cart'
-          : 'Sold out'}
+          : comingSoon
+            ? 'Coming soon'
+            : 'Sold out'}
       </AddToCartButton>
     </div>
   );

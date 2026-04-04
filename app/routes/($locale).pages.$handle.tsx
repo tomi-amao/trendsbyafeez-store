@@ -30,6 +30,7 @@ async function loadCriticalData({context, request, params}: Route.LoaderArgs) {
       variables: {
         handle: params.handle,
       },
+      cache: context.storefront.CacheLong(),
     }),
     // Add other queries here, so that they are loaded in parallel
   ]);

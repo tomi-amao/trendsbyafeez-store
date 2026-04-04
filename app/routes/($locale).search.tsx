@@ -259,6 +259,7 @@ async function regularSearch({
   }: {errors?: Array<{message: string}>} & RegularSearchQuery =
     await storefront.query(SEARCH_QUERY, {
       variables: {...variables, term},
+      cache: storefront.CacheNone(),
     });
 
   if (!items) {
@@ -432,6 +433,7 @@ async function predictiveSearch({
         limitScope: 'EACH',
         term,
       },
+      cache: storefront.CacheNone(),
     });
 
   if (errors) {

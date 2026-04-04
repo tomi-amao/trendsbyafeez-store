@@ -9,6 +9,7 @@ export async function loader({params, context}: Route.LoaderArgs) {
 
   const {product} = await context.storefront.query(QUICK_VIEW_QUERY, {
     variables: {handle},
+    cache: context.storefront.CacheShort(),
   });
 
   if (!product) {
