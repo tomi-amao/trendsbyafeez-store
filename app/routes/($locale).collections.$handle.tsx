@@ -1,6 +1,6 @@
 import {redirect, useLoaderData, useSearchParams, useNavigate, Link} from 'react-router';
 import type {Route} from './+types/collections.$handle';
-import {getPaginationVariables, Analytics, Image} from '@shopify/hydrogen';
+import {getPaginationVariables, Analytics, Image, Pagination} from '@shopify/hydrogen';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {ProductItem} from '~/components/ProductItem';
@@ -96,7 +96,9 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
 
   // Fetch editorial images for configured collections
   let editorialImages: EditorialImage[] = [];
-  const editorialConfig = handle ? EDITORIAL_COLLECTIONS[handle] : undefined;
+  const editorialConfig = handle
+    ? Object.entries(EDITORIAL_COLLECTIONS).find(([key]) => handle.includes(key))?.[1]
+    : undefined;
   if (editorialConfig) {
     try {
       const env = (context as any).env as Record<string, string | undefined>;
@@ -137,7 +139,7 @@ const SORT_OPTIONS = [
 
 export default function Collection() {
   const {collection, editorialImages} = useLoaderData<typeof loader>();
-  const editorialConfig = EDITORIAL_COLLECTIONS[collection.handle];
+  const editorialConfig = Object.entries(EDITORIAL_COLLECTIONS).find(([key]) => collection.handle.includes(key))?.[1];
   const hasEditorial = !!editorialConfig && editorialImages.length > 0;
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -285,30 +287,79 @@ export default function Collection() {
 
       {/* ── Product Grid ── */}
       <div className="collection-products">
-        <PaginatedResourceSection<ProductItemFragment>
-          connection={collection.products}
-          resourcesClassName={`products-grid${hasEditorial ? ' products-grid--editorial' : ''}`}
-        >
-          {({node: product, index}) => (
-            <React.Fragment key={product.id}>
-              {/* Insert editorial tile at configurable intervals */}
-              {hasEditorial && index > 0 && index % editorialConfig.interval === 0 && (() => {
-                const editorialIndex = Math.floor(index / editorialConfig.interval) - 1;
-                return (
-                  <EditorialTile
-                    image={editorialImages[editorialIndex % editorialImages.length]}
-                    editorialIndex={editorialIndex}
-                    link={editorialConfig.link}
-                  />
-                );
-              })()}
-              <ProductItem
-                product={product}
-                loading={index < 8 ? 'eager' : undefined}
-              />
-            </React.Fragment>
-          )}
-        </PaginatedResourceSection>
+        <Pagination connection={collection.products}>
+          {({nodes: rawNodes, isLoading, PreviousLink, NextLink}) => {
+            const nodes = rawNodes as ProductItemFragment[];
+            // Build a mixed grid of product cards + editorial tiles.
+            // We compute editorial placements up-front with full awareness of
+            // how many products remain after each insertion point, so we never
+            // leave phantom empty rows.
+            type GridItem =
+              | {type: 'product'; product: ProductItemFragment; index: number}
+              | {type: 'editorial'; editorialIndex: number};
+
+            const items: GridItem[] = [];
+
+            if (hasEditorial && editorialConfig) {
+              const interval = editorialConfig.interval;
+              let editorialCount = 0;
+
+              nodes.forEach((product, index) => {
+                // Insert editorial before this product if it's at an even interval
+                // AND at least 1 product remains after this point so the
+                // tile appears "between" real content rather than at the very end.
+                if (index > 0 && index % interval === 0) {
+                  const productsRemaining = nodes.length - index;
+                  if (productsRemaining >= 1) {
+                    items.push({type: 'editorial', editorialIndex: editorialCount});
+                    editorialCount++;
+                  }
+                }
+                items.push({type: 'product', product, index});
+              });
+            } else {
+              nodes.forEach((product, index) => {
+                items.push({type: 'product', product, index});
+              });
+            }
+
+            return (
+              <div>
+                <div className="pagination-link">
+                  <PreviousLink>
+                    {isLoading ? 'Loading...' : <span className="pagination-btn">Load Previous</span>}
+                  </PreviousLink>
+                </div>
+                <div className={`products-grid${hasEditorial ? ' products-grid--editorial' : ''}`}>
+                  {items.map((item) => {
+                    if (item.type === 'editorial') {
+                      return (
+                        <EditorialTile
+                          key={`editorial-${item.editorialIndex}`}
+                          image={editorialImages[item.editorialIndex % editorialImages.length]}
+                          editorialIndex={item.editorialIndex}
+                          link={editorialConfig?.link ?? '#'}
+                        />
+                      );
+                    }
+                    return (
+                      <ProductItem
+                        key={item.product.id}
+                        product={item.product}
+                        loading={item.index < 8 ? 'eager' : undefined}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="pagination-link">
+                  <NextLink>
+                    {isLoading ? 'Loading...' : <span className="pagination-btn">Load More</span>}
+                  </NextLink>
+                </div>
+              </div>
+            );
+          }}
+        </Pagination>
       </div>
 
       {/* Sparse collection prompt */}

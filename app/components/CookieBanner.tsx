@@ -1,18 +1,15 @@
 /**
- * CookieBanner — Fixed bottom consent banner with granular preferences modal.
+ * CookieBanner — Compact floating cookie consent UI.
  *
- * Matches the feature set of Shopify's native privacy banner:
- *   - Accept / Decline all from the bottom bar
- *   - "Manage preferences" opens a modal with per-category checkboxes
- *     (Required/Personalization/Marketing/Analytics) + "Save my choices"
- *   - Pre-populates checkboxes from `currentVisitorConsent()` on every open
- *
- * Integrates with Shopify's Customer Privacy API via Hydrogen's
- * `useAnalytics()` hook so analytics events are gated on consent.
+ * Three views:
+ *  icon   – small floating FAB (bottom-left) shown after consent is given
+ *  banner – slim bottom pill bar with reject/accept + gear icon
+ *  modal  – preferences panel anchored bottom-left with toggle switches
  */
 import {useEffect, useRef, useState, useCallback} from 'react';
 import {Link} from 'react-router';
 import {useAnalytics} from '@shopify/hydrogen';
+import {Cookie} from '@phosphor-icons/react';
 
 type ConsentPrefs = {
   personalization: boolean;
@@ -20,7 +17,13 @@ type ConsentPrefs = {
   analytics: boolean;
 };
 
-function readConsent(customerPrivacy: NonNullable<ReturnType<typeof useAnalytics>['customerPrivacy']>): ConsentPrefs {
+type View = 'none' | 'icon' | 'banner' | 'modal';
+
+function readConsent(
+  customerPrivacy: NonNullable<
+    ReturnType<typeof useAnalytics>['customerPrivacy']
+  >,
+): ConsentPrefs {
   const c = customerPrivacy.currentVisitorConsent();
   return {
     personalization: c.preferences === true,
@@ -29,18 +32,86 @@ function readConsent(customerPrivacy: NonNullable<ReturnType<typeof useAnalytics
   };
 }
 
+function GearSvg({size = 18}: {size?: number}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+    </svg>
+  );
+}
+
+function CategoryRow({
+  label,
+  badge,
+  description,
+  checked,
+  disabled,
+  onChange,
+  defaultExpanded,
+}: {
+  label: string;
+  badge?: string;
+  description: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange?: (val: boolean) => void;
+  defaultExpanded?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded ?? false);
+  return (
+    <li className="cb-cat">
+      <div className="cb-cat__row">
+        <button
+          type="button"
+          className="cb-cat__expand"
+          onClick={() => setExpanded((x) => !x)}
+          aria-expanded={expanded}
+          aria-label={`${expanded ? 'Collapse' : 'Expand'} ${label}`}
+        >
+          {expanded ? '−' : '+'}
+        </button>
+        <div className="cb-cat__info">
+          <span className="cb-cat__name">{label}</span>
+          {badge && <span className="cb-cat__badge">{badge}</span>}
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={checked}
+          disabled={disabled}
+          className={`cb-toggle${checked ? ' cb-toggle--on' : ''}${disabled ? ' cb-toggle--disabled' : ''}`}
+          onClick={() => !disabled && onChange?.(!checked)}
+          aria-label={`${label} cookies ${checked ? 'enabled' : 'disabled'}`}
+        >
+          <span className="cb-toggle__thumb" />
+        </button>
+      </div>
+      {expanded && <p className="cb-cat__desc">{description}</p>}
+    </li>
+  );
+}
+
 export function CookieBanner() {
   const {register, customerPrivacy} = useAnalytics();
   const {ready} = register('CookieConsentBanner');
-  const [visible, setVisible] = useState(false);
-  const [showPreferences, setShowPreferences] = useState(false);
+  const [view, setView] = useState<View>('none');
   const [prefs, setPrefs] = useState<ConsentPrefs>({
     personalization: false,
     marketing: false,
     analytics: false,
   });
 
-  // Prevent effect from re-firing when customerPrivacy identity changes each render
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -48,13 +119,12 @@ export function CookieBanner() {
     initialized.current = true;
     if (customerPrivacy.shouldShowBanner()) {
       setPrefs(readConsent(customerPrivacy));
-      const t = setTimeout(() => setVisible(true), 1200);
+      const t = setTimeout(() => setView('icon'), 600);
       return () => clearTimeout(t);
     } else {
       ready();
     }
-  // ready() is stable; customerPrivacy identity may change but we only init once
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerPrivacy]);
 
   const applyConsent = useCallback(
@@ -64,8 +134,7 @@ export function CookieBanner() {
         {marketing, analytics, preferences, sale_of_data: marketing},
         () => ready(),
       );
-      setVisible(false);
-      setShowPreferences(false);
+      setView('none');
     },
     [customerPrivacy, ready],
   );
@@ -75,221 +144,160 @@ export function CookieBanner() {
     applyConsent(true, true, true);
   }, [applyConsent]);
 
-  const handleDeclineAll = useCallback(() => {
+  const handleRejectAll = useCallback(() => {
     setPrefs({personalization: false, marketing: false, analytics: false});
     applyConsent(false, false, false);
   }, [applyConsent]);
 
-  const handleSaveChoices = useCallback(() => {
+  const handleSavePreferences = useCallback(() => {
     applyConsent(prefs.marketing, prefs.analytics, prefs.personalization);
   }, [applyConsent, prefs]);
 
-  const openPreferences = useCallback(() => {
+  const openModal = useCallback(() => {
     if (customerPrivacy) setPrefs(readConsent(customerPrivacy));
-    setShowPreferences(true);
+    setView('modal');
   }, [customerPrivacy]);
+
+  if (view === 'none') return null;
 
   return (
     <>
-      {/* ── Bottom bar ─────────────────────────────────────────────── */}
-      <div
-        className={`cookie-banner${visible ? ' cookie-banner--visible' : ''}`}
-        role="region"
-        aria-label="Cookie consent"
-        aria-live="polite"
-      >
-        <div className="cookie-banner__inner">
-          <div className="cookie-banner__text">
-            <p className="cookie-banner__title">Cookie consent</p>
-            <p className="cookie-banner__body">
-              We and our partners, including Shopify, use cookies and other
-              technologies to personalize your experience, show you ads, and
-              perform analytics, and we will not use cookies or other
-              technologies for these purposes unless you accept them. Learn
-              more in our{' '}
-              <Link to="/policies/privacy-policy" prefetch="intent">
-                Privacy Policy
-              </Link>
-            </p>
-          </div>
-          <div className="cookie-banner__actions">
-            <button
-              className="cookie-banner__btn cookie-banner__btn--manage"
-              onClick={openPreferences}
-              type="button"
-            >
-              Manage preferences
-            </button>
-            <button
-              className="cookie-banner__btn"
-              onClick={handleDeclineAll}
-              type="button"
-            >
-              Decline
-            </button>
-            <button
-              className="cookie-banner__btn cookie-banner__btn--accept"
-              onClick={handleAcceptAll}
-              type="button"
-            >
-              Accept
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Floating icon FAB — post-consent minimised state */}
+      {(view === 'icon' || view === 'banner') && (
+        <button
+          type="button"
+          className={`cb-icon-fab${view === 'banner' ? ' cb-icon-fab--active' : ''}`}
+          onClick={() => setView(view === 'banner' ? 'icon' : 'banner')}
+          aria-label={view === 'banner' ? 'Close cookie banner' : 'Cookie preferences'}
+          aria-expanded={view === 'banner'}
+        >
+          <Cookie size={22} weight="fill" aria-hidden="true" />
+        </button>
+      )}
 
-      {/* ── Preferences modal ──────────────────────────────────────── */}
-      {showPreferences && (
+      {/* Compact bottom bar */}
+      {view === 'banner' && (
         <div
-          className="cookie-prefs-overlay"
+          className="cb-bar"
+          role="region"
+          aria-label="Cookie consent"
+          aria-live="polite"
+        >
+          <div className="cb-bar__inner">
+            <Cookie size={22} weight="fill" aria-hidden="true" />
+            <div className="cb-bar__btns">
+              <button
+                type="button"
+                className="cb-bar__btn"
+                onClick={handleRejectAll}
+              >
+                Reject all
+              </button>
+              <button
+                type="button"
+                className="cb-bar__btn cb-bar__btn--accept"
+                onClick={handleAcceptAll}
+              >
+                Accept cookies
+              </button>
+            </div>
+            <button
+              type="button"
+              className="cb-bar__gear"
+              onClick={openModal}
+              aria-label="Cookie settings"
+            >
+              <GearSvg size={18} />
+            </button>
+          </div>
+          <p className="cb-bar__text">
+            We and our partners use cookies and other technologies to
+            personalize your experience, show you ads, and perform analytics.
+            See Our{' '}
+            <Link to="/pages/cookie-policy" prefetch="intent">
+              Cookie Policy
+            </Link>
+            .
+          </p>
+        </div>
+      )}
+
+      {/* Preferences modal — bottom-left panel */}
+      {view === 'modal' && (
+        <div
+          className="cb-modal"
           role="dialog"
           aria-modal="true"
-          aria-label="Cookie and privacy preferences"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowPreferences(false);
-          }}
+          aria-label="Cookie preferences"
         >
-          <div className="cookie-prefs-panel">
-            {/* Header */}
-            <div className="cookie-prefs-header">
-              <h2 className="cookie-prefs-title">
-                Cookie and privacy preferences
-              </h2>
-              <div className="cookie-prefs-header-actions">
-                <button
-                  className="cookie-banner__btn cookie-banner__btn--accept"
-                  onClick={handleAcceptAll}
-                  type="button"
-                >
-                  Accept all
-                </button>
-                <button
-                  className="cookie-banner__btn"
-                  onClick={handleDeclineAll}
-                  type="button"
-                >
-                  Decline all
-                </button>
-                <button
-                  className="cookie-banner__btn cookie-banner__btn--save"
-                  onClick={handleSaveChoices}
-                  type="button"
-                >
-                  Save my choices
-                </button>
-                <button
-                  className="cookie-prefs-close"
-                  onClick={() => setShowPreferences(false)}
-                  type="button"
-                  aria-label="Close preferences"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
+          <div className="cb-modal__header">
+            <h2 className="cb-modal__title">We use cookies</h2>
+            <button
+              type="button"
+              className="cb-modal__close"
+              onClick={() => setView('banner')}
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
 
-            {/* Intro */}
-            <div className="cookie-prefs-intro">
-              <p className="cookie-prefs-intro-heading">You control your data</p>
-              <p className="cookie-prefs-intro-body">
-                Learn more about the cookies we use, and choose which cookies to
-                allow.
-              </p>
-            </div>
+          <p className="cb-modal__desc">
+            We and our partners use cookies and other technologies to
+            personalize your experience, show you ads, and perform analytics.
+            See Our{' '}
+            <Link to="/pages/cookie-policy" prefetch="intent">
+              Cookie Policy
+            </Link>
+            .
+          </p>
 
-            <hr className="cookie-prefs-divider" />
+          <p className="cb-modal__note">Save your preferences to close:</p>
 
-            {/* Categories */}
-            <ul className="cookie-prefs-categories">
-              {/* Required — always on, non-interactive */}
-              <li className="cookie-prefs-category">
-                <label className="cookie-prefs-category-label cookie-prefs-category-label--disabled">
-                  <span className="cookie-prefs-checkbox-wrap">
-                    <input type="checkbox" checked readOnly disabled />
-                  </span>
-                  <div className="cookie-prefs-category-text">
-                    <span className="cookie-prefs-category-name">Required</span>
-                    <span className="cookie-prefs-category-desc">
-                      These cookies are necessary for the site to function
-                      properly, including capabilities like logging in and adding
-                      items to the cart.
-                    </span>
-                  </div>
-                </label>
-              </li>
-
-              {/* Personalization → preferences */}
-              <li className="cookie-prefs-category">
-                <label className="cookie-prefs-category-label">
-                  <span className="cookie-prefs-checkbox-wrap">
-                    <input
-                      type="checkbox"
-                      checked={prefs.personalization}
-                      onChange={(e) =>
-                        setPrefs((p) => ({
-                          ...p,
-                          personalization: e.target.checked,
-                        }))
-                      }
-                    />
-                  </span>
-                  <div className="cookie-prefs-category-text">
-                    <span className="cookie-prefs-category-name">
-                      Personalization
-                    </span>
-                    <span className="cookie-prefs-category-desc">
-                      These cookies store details about your actions to
-                      personalize your next visit to the website.
-                    </span>
-                  </div>
-                </label>
-              </li>
-
-              {/* Marketing */}
-              <li className="cookie-prefs-category">
-                <label className="cookie-prefs-category-label">
-                  <span className="cookie-prefs-checkbox-wrap">
-                    <input
-                      type="checkbox"
-                      checked={prefs.marketing}
-                      onChange={(e) =>
-                        setPrefs((p) => ({...p, marketing: e.target.checked}))
-                      }
-                    />
-                  </span>
-                  <div className="cookie-prefs-category-text">
-                    <span className="cookie-prefs-category-name">Marketing</span>
-                    <span className="cookie-prefs-category-desc">
-                      These cookies are used by us and our partners, including
-                      Shopify, to optimize marketing communications and show you
-                      ads on other websites.
-                    </span>
-                  </div>
-                </label>
-              </li>
-
-              {/* Analytics */}
-              <li className="cookie-prefs-category">
-                <label className="cookie-prefs-category-label">
-                  <span className="cookie-prefs-checkbox-wrap">
-                    <input
-                      type="checkbox"
-                      checked={prefs.analytics}
-                      onChange={(e) =>
-                        setPrefs((p) => ({...p, analytics: e.target.checked}))
-                      }
-                    />
-                  </span>
-                  <div className="cookie-prefs-category-text">
-                    <span className="cookie-prefs-category-name">Analytics</span>
-                    <span className="cookie-prefs-category-desc">
-                      These cookies help us understand how you interact with the
-                      site. We use this data to identify areas to improve.
-                    </span>
-                  </div>
-                </label>
-              </li>
+          <div className="cb-modal__section">
+            <p className="cb-modal__section-label">You allow:</p>
+            <ul className="cb-cats">
+              <CategoryRow
+                label="Necessary"
+                badge="Required"
+                description="Necessary cookies are required to enable the basic features of this site, such as providing secure log-in or adjusting your consent preferences."
+                checked={true}
+                disabled={true}
+                defaultExpanded={true}
+              />
+              <CategoryRow
+                label="Performance & analytics"
+                description="These cookies help us understand how you interact with the site and how we can improve. They track visits and traffic sources anonymously."
+                checked={prefs.analytics}
+                onChange={(val) =>
+                  setPrefs((p) => ({...p, analytics: val, personalization: val}))
+                }
+              />
+              <CategoryRow
+                label="Marketing & Advertising"
+                description="These cookies are used to make advertising more relevant to you. They track your activity across sites to deliver targeted ads."
+                checked={prefs.marketing}
+                onChange={(val) => setPrefs((p) => ({...p, marketing: val}))}
+              />
             </ul>
+          </div>
+
+          <div className="cb-modal__footer">
+            <Cookie size={18} weight="fill" aria-hidden="true" />
+            <button
+              type="button"
+              className="cb-modal__btn"
+              onClick={handleAcceptAll}
+            >
+              Accept cookies
+            </button>
+            <button
+              type="button"
+              className="cb-modal__btn cb-modal__btn--save"
+              onClick={handleSavePreferences}
+            >
+              Save preferences
+            </button>
           </div>
         </div>
       )}
