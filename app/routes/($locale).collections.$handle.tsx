@@ -16,15 +16,29 @@ interface EditorialImage {
   alt: string | null;
 }
 
-// Configurable
-const EDITORIAL_INTERVAL = 4; // Insert editorial every N products
-// TODO: update this href when the linked product/page is decided
-const EDITORIAL_LINK = '/collections/crown';
+interface EditorialConfig {
+  filenamePrefix: string;
+  link: string;
+  interval: number;
+}
 
-function EditorialTile({image, editorialIndex}: {image: EditorialImage; editorialIndex: number}) {
+const EDITORIAL_COLLECTIONS: Record<string, EditorialConfig> = {
+  crowns: {
+    filenamePrefix: 'EDITORIAL_CROWN_',
+    link: '/collections/crowns',
+    interval: 4,
+  },
+  ss26: {
+    filenamePrefix: 'EDITORIAL_SS26_',
+    link: '/collections/og-ss26',
+    interval: 2,
+  },
+};
+
+function EditorialTile({image, editorialIndex, link}: {image: EditorialImage; editorialIndex: number; link: string}) {
   const side = editorialIndex % 2 === 0 ? 'left' : 'right';
   return (
-    <Link to={EDITORIAL_LINK} className={`editorial-tile editorial-tile--${side}`} prefetch="none">
+    <Link to={link} className={`editorial-tile editorial-tile--${side}`} prefetch="none">
       <img
         src={image.url}
         alt={image.alt || 'Editorial'}
@@ -80,9 +94,10 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
 
   redirectIfHandleIsLocalized(request, {handle, data: collection});
 
-  // For the crowns collection, fetch editorial images
+  // Fetch editorial images for configured collections
   let editorialImages: EditorialImage[] = [];
-  if (handle === 'crowns') {
+  const editorialConfig = handle ? EDITORIAL_COLLECTIONS[handle] : undefined;
+  if (editorialConfig) {
     try {
       const env = (context as any).env as Record<string, string | undefined>;
       const clientId = env?.SHOPIFY_CLIENT_ID;
@@ -91,7 +106,7 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
       if (clientId && clientSecret && storeDomain) {
         const adminToken = await getAdminAccessToken(storeDomain, clientId, clientSecret);
         const files = await fetchAdminFiles(storeDomain, adminToken, {
-          filenamePrefix: 'EDITORIAL_HAT_',
+          filenamePrefix: editorialConfig.filenamePrefix,
           limit: 20,
         });
         editorialImages = files
@@ -122,7 +137,8 @@ const SORT_OPTIONS = [
 
 export default function Collection() {
   const {collection, editorialImages} = useLoaderData<typeof loader>();
-  const isCrownCollection = collection.handle === 'crowns';  
+  const editorialConfig = EDITORIAL_COLLECTIONS[collection.handle];
+  const hasEditorial = !!editorialConfig && editorialImages.length > 0;
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [sortOpen, setSortOpen] = useState(false);
@@ -271,17 +287,18 @@ export default function Collection() {
       <div className="collection-products">
         <PaginatedResourceSection<ProductItemFragment>
           connection={collection.products}
-          resourcesClassName={`products-grid${isCrownCollection && editorialImages.length > 0 ? ' products-grid--editorial' : ''}`}
+          resourcesClassName={`products-grid${hasEditorial ? ' products-grid--editorial' : ''}`}
         >
           {({node: product, index}) => (
             <React.Fragment key={product.id}>
               {/* Insert editorial tile at configurable intervals */}
-              {isCrownCollection && editorialImages.length > 0 && index > 0 && index % EDITORIAL_INTERVAL === 0 && (() => {
-                const editorialIndex = Math.floor(index / EDITORIAL_INTERVAL) - 1;
+              {hasEditorial && index > 0 && index % editorialConfig.interval === 0 && (() => {
+                const editorialIndex = Math.floor(index / editorialConfig.interval) - 1;
                 return (
                   <EditorialTile
                     image={editorialImages[editorialIndex % editorialImages.length]}
                     editorialIndex={editorialIndex}
+                    link={editorialConfig.link}
                   />
                 );
               })()}
