@@ -557,18 +557,23 @@ button.reset {
 /* ─── Marquee Divider ──────────────────────────────────────────── */
 .marquee-divider {
   overflow: hidden;
-  /* border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border); */
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
   padding: 0.75rem 0;
   white-space: nowrap;
+  width: 100%;
+  display: block;
 }
 
 .marquee-divider__track {
-  display: inline-block;
+  display: flex;
+  width: max-content;
   animation: marquee-scroll 30s linear infinite;
 }
 
 .marquee-divider__text {
+  flex-shrink: 0;
+  min-width: 100vw;
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.2em;
@@ -2579,7 +2584,7 @@ html[data-header-state="hidden"] .collection-controls {
 
 @media (min-width: 768px) {
   .footer__grid {
-    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr;
   }
 }
 
@@ -4680,22 +4685,27 @@ body:has(.gallery-page) > main {
 .cb-bar {
   position: fixed;
   bottom: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
+  left: calc(50% - min(280px, 50vw - 1rem));
+  right: 1rem;
   z-index: 400;
   background: var(--color-dark);
   color: var(--color-light);
   border-radius: 60px;
   padding: 0.7rem 1rem;
-  max-width: 560px;
-  width: calc(100% - 2rem);
   box-shadow: 0 4px 24px rgba(0,0,0,0.28);
   animation: cb-bar-in 0.4s var(--ease-out-expo) both;
 }
 
+@media (min-width: 600px) {
+  .cb-bar {
+    left: auto;
+    width: min(420px, calc(100vw - 2.5rem));
+  }
+}
+
 @keyframes cb-bar-in {
-  from { transform: translateX(-50%) translateY(20px); opacity: 0; }
-  to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
 
 .cb-bar__inner {
@@ -4776,7 +4786,7 @@ body:has(.gallery-page) > main {
 .cb-modal {
   position: fixed;
   bottom: 1.25rem;
-  left: 1.25rem;
+  right: 1.25rem;
   z-index: 500;
   background: #191919;
   color: var(--color-light);
