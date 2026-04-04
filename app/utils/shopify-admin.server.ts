@@ -166,6 +166,79 @@ export async function fetchAdminVideoByFilename(
 }
 
 /**
+ * Resolved hero media — either a still image or a looping video.
+ */
+export type AdminHeroMedia =
+  | {type: 'image'; url: string; altText: string | null}
+  | {type: 'video'; sources: {url: string; mimeType: string | null}[]; altText: string | null};
+
+/**
+ * Fetch a single file from Shopify Files by filename.
+ * Handles both MediaImage and Video nodes.
+ * Returns null if not found or on error.
+ */
+export async function fetchAdminHeroMedia(
+  storeDomain: string,
+  accessToken: string,
+  filename: string,
+): Promise<AdminHeroMedia | null> {
+  const apiUrl = `https://${storeDomain}/admin/api/2024-04/graphql.json`;
+
+  const res = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Shopify-Access-Token': accessToken,
+    },
+    body: JSON.stringify({
+      query: `
+        query AdminHeroMedia($query: String) {
+          files(first: 1, query: $query) {
+            edges {
+              node {
+                ... on MediaImage {
+                  id
+                  alt
+                  image { url }
+                }
+                ... on Video {
+                  id
+                  alt
+                  sources { url mimeType }
+                }
+              }
+            }
+          }
+        }
+      `,
+      variables: {query: `filename:${filename}`},
+    }),
+  });
+
+  if (!res.ok) {
+    console.error(`[ShopifyAdmin] Hero media fetch failed (HTTP ${res.status})`);
+    return null;
+  }
+
+  const json = (await res.json()) as any;
+  const node = json?.data?.files?.edges?.[0]?.node;
+  if (!node) return null;
+
+  if (node.image) {
+    return {type: 'image', url: node.image.url as string, altText: (node.alt as string | null) ?? null};
+  }
+  if (node.sources?.length) {
+    return {
+      type: 'video',
+      sources: (node.sources as any[]).map((s) => ({url: s.url as string, mimeType: (s.mimeType as string | null) ?? null})),
+      altText: (node.alt as string | null) ?? null,
+    };
+  }
+
+  return null;
+}
+
+/**
  * Fetch all MediaImage files from Shopify whose filenames match
  * the optional `filenamePrefix` filter (default: fetch all).
  *

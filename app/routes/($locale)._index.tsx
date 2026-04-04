@@ -1,13 +1,34 @@
 import {Await, useLoaderData, Link} from 'react-router';
 import type {Route} from './+types/_index';
-import {Suspense, useEffect, useRef} from 'react';
+import {Suspense, useEffect, useRef, useState} from 'react';
 import {Image} from '@shopify/hydrogen';
 import type {
   FeaturedCollectionFragment,
   RecommendedProductsQuery,
 } from 'storefrontapi.generated';
 import {ProductItem} from '~/components/ProductItem';
-import {getAdminAccessToken, fetchAdminFiles} from '~/utils/shopify-admin.server';
+import {getAdminAccessToken, fetchAdminFiles, fetchAdminHeroMedia} from '~/utils/shopify-admin.server';
+import type {AdminHeroMedia} from '~/utils/shopify-admin.server';
+
+/**
+ * Hero media config — set the filename (from Shopify Files) for each
+ * breakpoint, or leave as null to fall back to the collection image.
+ *
+ * Supports both images (.jpg, .png, .webp) and videos (.mp4, .mov).
+ *
+ * `position` controls the CSS object-position — i.e. which part of the
+ * image/video is visible when it's cropped to fill the screen.
+ * Use any valid CSS value: 'center', 'top', 'bottom', '50% 20%', etc.
+ * Defaults to 'center' if omitted.
+ *
+ * Examples:
+ *   HERO_DESKTOP: { filename: 'hero-desktop.mp4', position: 'center top' }
+ *   HERO_MOBILE:  { filename: 'hero-mobile.jpg',  position: '50% 20%'    }
+ *
+ * Leave HERO_MOBILE as null to reuse the desktop media on all screen sizes.
+ */
+const HERO_DESKTOP: {filename: string; position?: string} | null = { filename: 'HOMEPAGE_LANDSCAPE' };
+const HERO_MOBILE:  {filename: string; position?: string} | null = { filename: 'GDDUP' };
 
 export const meta: Route.MetaFunction = () => {
   return [{title: 'TrendsByAfeez | Home'}];
@@ -20,15 +41,36 @@ export async function loader(args: Route.LoaderArgs) {
 }
 
 async function loadCriticalData({context}: Route.LoaderArgs) {
-  const [{collections}] = await Promise.all([
+  const env = (context as any).env as Record<string, string | undefined>;
+
+  const fetchHeroMedia = async (filename: string | null): Promise<AdminHeroMedia | null> => {
+    if (!filename) return null;
+    const clientId = env?.SHOPIFY_CLIENT_ID;
+    const clientSecret = env?.SHOPIFY_CLIENT_SECRET;
+    const storeDomain = env?.PUBLIC_STORE_DOMAIN;
+    if (!clientId || !clientSecret || !storeDomain) return null;
+    try {
+      const token = await getAdminAccessToken(storeDomain, clientId, clientSecret);
+      return await fetchAdminHeroMedia(storeDomain, token, filename);
+    } catch {
+      return null;
+    }
+  };
+
+  const [collectionsResult, heroDesktop, heroMobile] = await Promise.all([
     context.storefront.query(FEATURED_COLLECTION_QUERY, {
       cache: context.storefront.CacheShort(),
     }),
+    fetchHeroMedia(HERO_DESKTOP?.filename ?? null),
+    fetchHeroMedia(HERO_MOBILE?.filename ?? null),
   ]);
 
   return {
-    featuredCollection: collections.nodes[0],
-    allCollections: collections.nodes,
+    featuredCollection: collectionsResult.collections.nodes[0],
+    allCollections: collectionsResult.collections.nodes,
+    heroDesktop,
+    // If no mobile-specific file was configured, fall back to desktop
+    heroMobile: heroMobile ?? heroDesktop,
   };
 }
 
@@ -65,6 +107,51 @@ function loadDeferredData({context}: Route.LoaderArgs) {
   return {recommendedProducts, brandImage};
 }
 
+/* ─── Glyph Scramble CTA ───────────────────────────────────────── */
+const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ@#!?/\\|';
+
+function ScrambleCta({
+  from,
+  to,
+  speed = 2.4,
+  delay = 1400,
+}: {
+  from: string;
+  to: string;
+  speed?: number;
+  delay?: number;
+}) {
+  const [display, setDisplay] = useState(from);
+  useEffect(() => {
+    let progress = 0;
+    let lastTime = 0;
+    let raf: number;
+    const rand = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+    function tick(now: number) {
+      if (lastTime === 0) lastTime = now;
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+      progress = Math.min(1, progress + dt * speed);
+      let out = '';
+      for (let i = 0; i < to.length; i++) {
+        if (to[i] === ' ') { out += '\u2002'; continue; }
+        out += progress > i / to.length ? to[i] : rand();
+      }
+      setDisplay(out);
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    }
+    const timer = setTimeout(() => {
+      raf = requestAnimationFrame(tick);
+    }, delay);
+    return () => {
+      clearTimeout(timer);
+      cancelAnimationFrame(raf);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return <span className="hero__cta-text">{display}</span>;
+}
+
 /* ─── Scroll Reveal Hook ───────────────────────────────────────── */
 function useScrollReveal<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -90,7 +177,13 @@ export default function Homepage() {
   const data = useLoaderData<typeof loader>();
   return (
     <div className="home">
-      <HeroSection collection={data.featuredCollection} />
+      <HeroSection
+        collection={data.featuredCollection}
+        heroDesktop={data.heroDesktop ?? null}
+        heroMobile={data.heroMobile ?? null}
+        desktopPosition={HERO_DESKTOP?.position}
+        mobilePosition={HERO_MOBILE?.position}
+      />
       {/* <FeaturedProducts products={data.recommendedProducts} /> */}
       {/* <CollectionShowcase collections={data.allCollections} /> */}
       {/* <BrandValues /> */}
@@ -100,21 +193,115 @@ export default function Homepage() {
 }
 
 /* ─── Hero ─────────────────────────────────────────────────────── */
-function HeroSection({collection}: {collection: FeaturedCollectionFragment}) {
+function HeroMedia({
+  media,
+  className,
+  position,
+}: {
+  media: AdminHeroMedia;
+  className?: string;
+  position?: string;
+}) {
+  const style = position ? {objectPosition: position} : undefined;
+  if (media.type === 'video') {
+    return (
+      <video
+        className={className}
+        style={style}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="none"
+        aria-hidden="true"
+      >
+        {media.sources.map((s) => (
+          <source key={s.url} src={s.url} type={s.mimeType ?? undefined} />
+        ))}
+      </video>
+    );
+  }
+  return (
+    <img
+      src={media.url}
+      className={className}
+      style={style}
+      alt={media.altText ?? ''}
+      loading="eager"
+      decoding="async"
+    />
+  );
+}
+
+function HeroSection({
+  collection,
+  heroDesktop,
+  heroMobile,
+  desktopPosition,
+  mobilePosition,
+}: {
+  collection: FeaturedCollectionFragment;
+  heroDesktop: AdminHeroMedia | null;
+  heroMobile: AdminHeroMedia | null;
+  desktopPosition?: string;
+  mobilePosition?: string;
+}) {
   if (!collection) return null;
-  const image = collection.image;
+  const fallbackImage = collection.image;
+
+  const desktop = heroDesktop;
+  const mobile = heroMobile;
+  const hasSeparateMobile = !!HERO_MOBILE;
+
+  const bothImages =
+    desktop?.type === 'image' && mobile?.type === 'image';
 
   return (
     <section className="hero">
-      {image && (
-        <Image
-          data={image}
-          sizes="100vw"
+      {/* ── Configured media ───────────────────────── */}
+      {desktop && bothImages && hasSeparateMobile && mobile ? (
+        // Two images → native <picture> responsive loading
+        <picture className="hero__picture">
+          <source
+            media="(min-width: 768px)"
+            srcSet={(desktop as Extract<AdminHeroMedia, {type: 'image'}>).url}
+          />
+          <img
+            src={(mobile as Extract<AdminHeroMedia, {type: 'image'}>).url}
+            className="hero__image"
+            style={{objectPosition: desktopPosition ?? mobilePosition ?? 'center'}}
+            alt={desktop.altText ?? fallbackImage?.altText ?? collection.title}
+            loading="eager"
+            decoding="async"
+          />
+        </picture>
+      ) : desktop ? (
+        // Single source (or one is a video) — render both with CSS show/hide
+        <>
+          <HeroMedia
+            media={desktop}
+            className={`hero__image hero__image--desktop`}
+            position={desktopPosition}
+          />
+          {hasSeparateMobile && mobile && (
+            <HeroMedia
+              media={mobile}
+              className="hero__image hero__image--mobile"
+              position={mobilePosition}
+            />
+          )}
+        </>
+      ) : fallbackImage ? (
+        // Fallback to Shopify collection image
+        <img
+          src={fallbackImage.url}
           className="hero__image"
-          alt={image.altText || collection.title}
+          alt={fallbackImage.altText ?? collection.title}
           loading="eager"
+          decoding="async"
         />
-      )}
+      ) : null}
+
       <div className="hero__overlay" />
       <div className="hero__content">
         {/* <span className="hero__tag">Now Available</span> */}
@@ -130,7 +317,7 @@ function HeroSection({collection}: {collection: FeaturedCollectionFragment}) {
             className="hero__cta"
             prefetch="intent"
           >
-            Shop Now
+            <ScrambleCta from="IF YOU SAW ME" to="SHOP NOW" delay={1400} />
           </Link>
         </div>
       </div>
