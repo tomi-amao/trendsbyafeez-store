@@ -1,11 +1,11 @@
-import {redirect, useLoaderData, useSearchParams, useNavigate, Link} from 'react-router';
+import {Await, redirect, useLoaderData, useSearchParams, useNavigate, Link} from 'react-router';
 import type {Route} from './+types/collections.$handle';
 import {getPaginationVariables, Analytics, Image, Pagination} from '@shopify/hydrogen';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {ProductItem} from '~/components/ProductItem';
 import type {ProductItemFragment} from 'storefrontapi.generated';
-import {useState, useCallback} from 'react';
+import {Suspense, useState, useCallback} from 'react';
 import React from 'react';
 import {getAdminAccessToken, fetchAdminFiles} from '~/utils/shopify-admin.server';
 
@@ -39,11 +39,11 @@ function EditorialTile({image, editorialIndex, link}: {image: EditorialImage; ed
   const side = editorialIndex % 2 === 0 ? 'left' : 'right';
   return (
     <Link to={link} className={`editorial-tile editorial-tile--${side}`} prefetch="none">
-      <img
-        src={image.url}
-        alt={image.alt || 'Editorial'}
+      <Image
+        data={{url: image.url, altText: image.alt, id: image.id}}
         className="editorial-tile__img"
         loading="lazy"
+        sizes="(min-width: 768px) 25vw, 50vw"
       />
     </Link>
   );
@@ -94,37 +94,43 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
 
   redirectIfHandleIsLocalized(request, {handle, data: collection});
 
-  // Fetch editorial images for configured collections
-  let editorialImages: EditorialImage[] = [];
-  const editorialConfig = handle
-    ? Object.entries(EDITORIAL_COLLECTIONS).find(([key]) => handle.includes(key))?.[1]
-    : undefined;
-  if (editorialConfig) {
-    try {
-      const env = (context as any).env as Record<string, string | undefined>;
-      const clientId = env?.SHOPIFY_CLIENT_ID;
-      const clientSecret = env?.SHOPIFY_CLIENT_SECRET;
-      const storeDomain = env?.PUBLIC_STORE_DOMAIN;
-      if (clientId && clientSecret && storeDomain) {
-        const adminToken = await getAdminAccessToken(storeDomain, clientId, clientSecret);
-        const files = await fetchAdminFiles(storeDomain, adminToken, {
-          filenamePrefix: editorialConfig.filenamePrefix,
-          limit: 20,
-        });
-        editorialImages = files
-          .filter((f) => f.image !== null)
-          .map((f) => ({id: f.id, url: f.image!.url, alt: f.alt}));
-      }
-    } catch {
-      // Editorial images are optional — fail gracefully
-    }
-  }
-
-  return {collection, editorialImages};
+  return {collection};
 }
 
-function loadDeferredData(_args: Route.LoaderArgs) {
-  return {};
+function loadDeferredData({context, params}: Route.LoaderArgs) {
+  const handle = params.handle ?? '';
+  const editorialConfigEntry = Object.entries(EDITORIAL_COLLECTIONS).find(
+    ([key]) => handle.includes(key),
+  );
+
+  if (!editorialConfigEntry) {
+    return {editorialImages: Promise.resolve<EditorialImage[]>([]) as Promise<EditorialImage[]>};
+  }
+
+  const [, editorialConfig] = editorialConfigEntry;
+  const env = (context as any).env as Record<string, string | undefined>;
+  const clientId = env?.SHOPIFY_CLIENT_ID;
+  const clientSecret = env?.SHOPIFY_CLIENT_SECRET;
+  const storeDomain = env?.PUBLIC_STORE_DOMAIN;
+
+  const editorialImages: Promise<EditorialImage[]> =
+    clientId && clientSecret && storeDomain
+      ? getAdminAccessToken(storeDomain, clientId, clientSecret)
+          .then((token) =>
+            fetchAdminFiles(storeDomain, token, {
+              filenamePrefix: editorialConfig.filenamePrefix,
+              limit: 20,
+            }),
+          )
+          .then((files) =>
+            files
+              .filter((f) => f.image !== null)
+              .map((f) => ({id: f.id, url: f.image!.url, alt: f.alt})),
+          )
+          .catch(() => [])
+      : Promise.resolve([]);
+
+  return {editorialImages};
 }
 
 const SORT_OPTIONS = [
@@ -139,8 +145,12 @@ const SORT_OPTIONS = [
 
 export default function Collection() {
   const {collection, editorialImages} = useLoaderData<typeof loader>();
-  const editorialConfig = Object.entries(EDITORIAL_COLLECTIONS).find(([key]) => collection.handle.includes(key))?.[1];
-  const hasEditorial = !!editorialConfig && editorialImages.length > 0;
+  const editorialConfig = Object.entries(EDITORIAL_COLLECTIONS).find(
+    ([key]) => collection.handle.includes(key),
+  )?.[1];
+  // hasEditorial is determined by whether an editorial config exists for this collection;
+  // the actual images resolve lazily via Await
+  const hasEditorial = !!editorialConfig;
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [sortOpen, setSortOpen] = useState(false);
@@ -290,38 +300,6 @@ export default function Collection() {
         <Pagination connection={collection.products}>
           {({nodes: rawNodes, isLoading, PreviousLink, NextLink}) => {
             const nodes = rawNodes as ProductItemFragment[];
-            // Build a mixed grid of product cards + editorial tiles.
-            // We compute editorial placements up-front with full awareness of
-            // how many products remain after each insertion point, so we never
-            // leave phantom empty rows.
-            type GridItem =
-              | {type: 'product'; product: ProductItemFragment; index: number}
-              | {type: 'editorial'; editorialIndex: number};
-
-            const items: GridItem[] = [];
-
-            if (hasEditorial && editorialConfig) {
-              const interval = editorialConfig.interval;
-              let editorialCount = 0;
-
-              nodes.forEach((product, index) => {
-                // Insert editorial before this product if it's at an even interval
-                // AND at least 1 product remains after this point so the
-                // tile appears "between" real content rather than at the very end.
-                if (index > 0 && index % interval === 0) {
-                  const productsRemaining = nodes.length - index;
-                  if (productsRemaining >= 1) {
-                    items.push({type: 'editorial', editorialIndex: editorialCount});
-                    editorialCount++;
-                  }
-                }
-                items.push({type: 'product', product, index});
-              });
-            } else {
-              nodes.forEach((product, index) => {
-                items.push({type: 'product', product, index});
-              });
-            }
 
             return (
               <div>
@@ -330,27 +308,73 @@ export default function Collection() {
                     {isLoading ? 'Loading...' : <span className="pagination-btn">Load Previous</span>}
                   </PreviousLink>
                 </div>
-                <div className={`products-grid${hasEditorial ? ' products-grid--editorial' : ''}`}>
-                  {items.map((item) => {
-                    if (item.type === 'editorial') {
-                      return (
-                        <EditorialTile
-                          key={`editorial-${item.editorialIndex}`}
-                          image={editorialImages[item.editorialIndex % editorialImages.length]}
-                          editorialIndex={item.editorialIndex}
-                          link={editorialConfig?.link ?? '#'}
+                <Suspense
+                  fallback={
+                    <div className="products-grid">
+                      {nodes.map((product, index) => (
+                        <ProductItem
+                          key={product.id}
+                          product={product}
+                          loading={index < 8 ? 'eager' : undefined}
                         />
+                      ))}
+                    </div>
+                  }
+                >
+                  <Await resolve={editorialImages}>
+                    {(resolvedImages) => {
+                      type GridItem =
+                        | {type: 'product'; product: ProductItemFragment; index: number}
+                        | {type: 'editorial'; editorialIndex: number};
+
+                      const items: GridItem[] = [];
+                      const hasImages = resolvedImages.length > 0;
+
+                      if (hasImages && editorialConfig) {
+                        const interval = editorialConfig.interval;
+                        let editorialCount = 0;
+                        nodes.forEach((product, index) => {
+                          if (index > 0 && index % interval === 0) {
+                            const productsRemaining = nodes.length - index;
+                            if (productsRemaining >= 1) {
+                              items.push({type: 'editorial', editorialIndex: editorialCount});
+                              editorialCount++;
+                            }
+                          }
+                          items.push({type: 'product', product, index});
+                        });
+                      } else {
+                        nodes.forEach((product, index) => {
+                          items.push({type: 'product', product, index});
+                        });
+                      }
+
+                      return (
+                        <div className={`products-grid${hasImages ? ' products-grid--editorial' : ''}`}>
+                          {items.map((item) => {
+                            if (item.type === 'editorial') {
+                              return (
+                                <EditorialTile
+                                  key={`editorial-${item.editorialIndex}`}
+                                  image={resolvedImages[item.editorialIndex % resolvedImages.length]}
+                                  editorialIndex={item.editorialIndex}
+                                  link={editorialConfig?.link ?? '#'}
+                                />
+                              );
+                            }
+                            return (
+                              <ProductItem
+                                key={item.product.id}
+                                product={item.product}
+                                loading={item.index < 8 ? 'eager' : undefined}
+                              />
+                            );
+                          })}
+                        </div>
                       );
-                    }
-                    return (
-                      <ProductItem
-                        key={item.product.id}
-                        product={item.product}
-                        loading={item.index < 8 ? 'eager' : undefined}
-                      />
-                    );
-                  })}
-                </div>
+                    }}
+                  </Await>
+                </Suspense>
                 <div className="pagination-link">
                   <NextLink>
                     {isLoading ? 'Loading...' : <span className="pagination-btn">Load More</span>}
