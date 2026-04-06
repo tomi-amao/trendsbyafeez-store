@@ -306,7 +306,7 @@ export default function Product() {
       )}
 
       {/* You May Also Like */}
-      <Suspense>
+      <Suspense fallback={<div className="homepage-section" style={{minHeight: '320px'}} />}>
         <Await resolve={recommendedProducts}>
           {(response) =>
             response?.products.nodes.length ? (

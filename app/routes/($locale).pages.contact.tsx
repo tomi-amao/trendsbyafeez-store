@@ -83,9 +83,9 @@ export default function ContactPage() {
             <span className="contact-info__label">Email</span>
             <a
               className="contact-info__link"
-              href="mailto:hello@trendsbyafeez.com"
+              href="mailto:info@trendsbyafeez.com"
             >
-              hello@trendsbyafeez.com
+              info@trendsbyafeez.com
             </a>
           </div>
 
