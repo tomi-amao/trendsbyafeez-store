@@ -10,6 +10,7 @@ import {
   useNavigation,
   useOutletContext,
   type Fetcher,
+  type HeadersFunction,
 } from 'react-router';
 import type {Route} from './+types/account.addresses';
 import {
@@ -30,6 +31,8 @@ export type ActionResponse = {
 export const meta: Route.MetaFunction = () => {
   return [{title: 'Addresses'}];
 };
+
+export const headers: HeadersFunction = ({parentHeaders}) => parentHeaders;
 
 export async function loader({context}: Route.LoaderArgs) {
   await context.customerAccount.handleAuthStatus();

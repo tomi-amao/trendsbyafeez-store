@@ -1,4 +1,4 @@
-import {redirect, useLoaderData} from 'react-router';
+import {redirect, data, useLoaderData, type HeadersFunction} from 'react-router';
 import type {Route} from './+types/account.orders.$id';
 import {Money, Image} from '@shopify/hydrogen';
 import type {
@@ -10,6 +10,8 @@ import {CUSTOMER_ORDER_QUERY} from '~/graphql/customer-account/CustomerOrderQuer
 export const meta: Route.MetaFunction = ({data}) => {
   return [{title: `Order ${data?.order?.name}`}];
 };
+
+export const headers: HeadersFunction = ({parentHeaders}) => parentHeaders;
 
 export async function loader({params, context}: Route.LoaderArgs) {
   const {customerAccount} = context;
@@ -64,13 +66,16 @@ export async function loader({params, context}: Route.LoaderArgs) {
         ).percentage
       : null;
 
-  return {
-    order,
-    lineItems,
-    discountValue,
-    discountPercentage,
-    fulfillmentStatus,
-  };
+  return data(
+    {
+      order,
+      lineItems,
+      discountValue,
+      discountPercentage,
+      fulfillmentStatus,
+    },
+    {headers: {'Cache-Control': 'no-store'}},
+  );
 }
 
 export default function OrderRoute() {

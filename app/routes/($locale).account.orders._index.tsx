@@ -1,8 +1,10 @@
 import {
   Link,
+  data,
   useLoaderData,
   useNavigation,
   useSearchParams,
+  type HeadersFunction,
 } from 'react-router';
 import type {Route} from './+types/account.orders._index';
 import {useRef} from 'react';
@@ -33,6 +35,8 @@ export const meta: Route.MetaFunction = () => {
   return [{title: 'Orders'}];
 };
 
+export const headers: HeadersFunction = ({parentHeaders}) => parentHeaders;
+
 export async function loader({request, context}: Route.LoaderArgs) {
   const {customerAccount} = context;
   const paginationVariables = getPaginationVariables(request, {
@@ -55,7 +59,10 @@ export async function loader({request, context}: Route.LoaderArgs) {
     throw Error('Customer orders not found');
   }
 
-  return {customer: data.customer, filters};
+  return data(
+    {customer: data.customer, filters},
+    {headers: {'Cache-Control': 'no-store'}},
+  );
 }
 
 export default function Orders() {
