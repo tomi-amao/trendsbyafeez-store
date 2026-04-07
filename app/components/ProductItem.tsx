@@ -212,9 +212,23 @@ function QuickViewPanel({
   comingSoon: boolean;
 }) {
   const fetcher = useFetcher<{product: QuickViewProduct}>();
+  const cartFetcher = useFetcher({key: `qv-cart-${handle}`});
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [activeImgIdx, setActiveImgIdx] = useState(0);
+  const [addedToCart, setAddedToCart] = useState(false);
   const touchStartX = useRef<number | null>(null);
+  const cartWasSubmitting = useRef(false);
+
+  useEffect(() => {
+    if (cartFetcher.state !== 'idle') {
+      cartWasSubmitting.current = true;
+    } else if (cartWasSubmitting.current) {
+      cartWasSubmitting.current = false;
+      setAddedToCart(true);
+      const t = setTimeout(() => setAddedToCart(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [cartFetcher.state]);
 
   useEffect(() => {
     fetcher.load(`/api/quick-view/${handle}`);
@@ -290,10 +304,8 @@ function QuickViewPanel({
                   <Image
                     alt={qvActiveImg.altText || product.title}
                     data={qvActiveImg}
-                    aspectRatio="3/4"
-                    sizes="(min-width: 768px) 240px, 100vw"
+                    sizes="(min-width: 768px) 400px, 100vw"
                     loading="eager"
-                    key={qvActiveImg.url}
                   />
                 )}
                 {qvImages.length > 1 && (
@@ -391,6 +403,7 @@ function QuickViewPanel({
 
               {selectedVariant && (
                 <CartForm
+                  fetcherKey={`qv-cart-${handle}`}
                   route="/cart"
                   inputs={{
                     lines: [
@@ -402,13 +415,19 @@ function QuickViewPanel({
                   }}
                   action={CartForm.ACTIONS.LinesAdd}
                 >
-                  {(cartFetcher) => (
+                  {() => (
                     <button
                       type="submit"
-                      className="quickview-panel__add-to-cart"
+                      className={`quickview-panel__add-to-cart${addedToCart ? ' quickview-panel__add-to-cart--added' : ''}`}
                       disabled={!isVariantAvailable || cartFetcher.state !== 'idle'}
                     >
-                      {isVariantAvailable ? 'Add to Bag' : (comingSoon ? 'Coming Soon' : 'Sold Out')}
+                      {addedToCart
+                        ? 'Added to Cart'
+                        : isVariantAvailable
+                          ? 'Add to Cart'
+                          : comingSoon
+                            ? 'Coming Soon'
+                            : 'Sold Out'}
                     </button>
                   )}
                 </CartForm>

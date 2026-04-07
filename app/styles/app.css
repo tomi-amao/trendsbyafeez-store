@@ -3064,8 +3064,8 @@ html[data-header-state="hidden"] .collection-controls {
 
 .quickview-panel__image img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
+  object-fit: contain;
   display: block;
 }
 
@@ -3073,8 +3073,6 @@ html[data-header-state="hidden"] .collection-controls {
   .quickview-panel__image {
     flex-shrink: 0;
     position: relative;
-    max-height: 52dvh;
-    overflow: hidden;
   }
 }
 
@@ -3244,7 +3242,7 @@ html[data-header-state="hidden"] .collection-controls {
   text-transform: uppercase;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, letter-spacing 0.2s ease;
   margin-top: 0.25rem;
 }
 
@@ -3255,6 +3253,11 @@ html[data-header-state="hidden"] .collection-controls {
 .quickview-panel__add-to-cart:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.quickview-panel__add-to-cart--added {
+  background: #504f56;
+  letter-spacing: 0.08em;
 }
 
 .quickview-panel__view-details {
