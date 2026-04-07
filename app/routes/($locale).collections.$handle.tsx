@@ -31,7 +31,7 @@ const EDITORIAL_COLLECTIONS: Record<string, EditorialConfig> = {
   ss26: {
     filenamePrefix: 'EDITORIAL_SS26_',
     link: '/collections/og-ss26',
-    interval: 2,
+    interval: 4,
   },
 };
 

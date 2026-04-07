@@ -165,7 +165,7 @@ a {
 
 .header--transparent {
   background: transparent;
-  color: var(--color-light);
+  color: #504f56;
   
 }
 
@@ -213,8 +213,8 @@ a {
   width: auto;
   display: block;
   object-fit: contain;
-  /* Keep original white logo on transparent header */
-  filter: invert(0);
+  /* Tint white logo to #504f56 on transparent header */
+  filter: brightness(0) invert(28%) sepia(8%) saturate(400%) hue-rotate(225deg) brightness(95%);
   transition: filter 0.3s ease;
 }
 
@@ -281,8 +281,8 @@ a {
 }
 
 .header--transparent .header__cart-count {
-  background: var(--color-light);
-  color: var(--color-dark);
+  background: #504f56;
+  color: var(--color-light);
 }
 
 .header__menu-toggle {
@@ -480,9 +480,9 @@ button.reset {
   position: absolute;
   inset: 0;
   /* Stronger gradient on bottom + subtle left-side darken for text legibility */
-  background:
+  /* background:
     linear-gradient(to top, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.15) 45%, transparent 70%),
-    linear-gradient(to right, rgba(0, 0, 0, 0.35) 0%, transparent 60%);
+    linear-gradient(to right, rgba(0, 0, 0, 0.35) 0%, transparent 60%); */
   pointer-events: none;
 }
 
@@ -557,7 +557,7 @@ button.reset {
   padding: 0;
   background: transparent;
   border: none;
-  color: var(--color-light);
+  color: #504f56;
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.22em;
@@ -803,7 +803,8 @@ button.reset {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.45);
+  border-bottom: 1px solid #504f56;
+  color: #504f56;
   padding-bottom: 2px;
   align-self: flex-start;
   margin-top: 0.3rem;
@@ -811,7 +812,7 @@ button.reset {
 }
 
 .collection-showcase__card:hover .collection-showcase__cta {
-  border-color: rgba(255, 255, 255, 0.9);
+  border-color: #504f56;
   opacity: 1;
 }
 
@@ -1693,9 +1694,9 @@ html[data-header-state="hidden"] .collection-controls {
 .add-to-cart-button {
   width: 100%;
   padding: 1rem;
-  background: var(--color-dark);
+  background: #504f56;
   color: var(--color-light);
-  border: 1px solid var(--color-dark);
+  border: 1px solid #504f56;
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.15em;
@@ -1707,7 +1708,7 @@ html[data-header-state="hidden"] .collection-controls {
 
 .add-to-cart-button:hover:not(:disabled) {
   background: transparent;
-  color: var(--color-dark);
+  color: #504f56;
 }
 
 .add-to-cart-button:disabled {
@@ -2243,7 +2244,7 @@ html[data-header-state="hidden"] .collection-controls {
   display: block;
   width: 100%;
   padding: 1rem;
-  background: var(--color-dark);
+  background: #504f56;
   color: var(--color-light);
   text-align: center;
   font-size: 0.7rem;
@@ -2252,7 +2253,7 @@ html[data-header-state="hidden"] .collection-controls {
   text-transform: uppercase;
   text-decoration: none;
   transition: opacity 0.2s ease;
-  border: 1px solid var(--color-dark);
+  border: 1px solid #504f56;
 }
 
 .cart-checkout-btn:hover {
@@ -3083,7 +3084,7 @@ html[data-header-state="hidden"] .collection-controls {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.88);
+  background: transparent;
   border: none;
   width: 30px;
   height: 30px;
@@ -3094,12 +3095,12 @@ html[data-header-state="hidden"] .collection-controls {
   z-index: 4;
   padding: 0;
   color: var(--color-dark);
-  transition: background 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 
 .quickview-panel__img-prev:hover,
 .quickview-panel__img-next:hover {
-  background: rgba(255, 255, 255, 1);
+  opacity: 0.6;
 }
 
 .quickview-panel__img-prev {

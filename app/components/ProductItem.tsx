@@ -1,6 +1,6 @@
 import {Link, useFetcher} from 'react-router';
 import {Image, Money, CartForm, type OptimisticCartLineInput} from '@shopify/hydrogen';
-import {useState, useEffect, useCallback} from 'react';
+import {useState, useEffect, useCallback, useRef} from 'react';
 import {createPortal} from 'react-dom';
 import type {
   ProductItemFragment,
@@ -214,6 +214,7 @@ function QuickViewPanel({
   const fetcher = useFetcher<{product: QuickViewProduct}>();
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [activeImgIdx, setActiveImgIdx] = useState(0);
+  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     fetcher.load(`/api/quick-view/${handle}`);
@@ -273,7 +274,18 @@ function QuickViewPanel({
         ) : product ? (
           <div className="quickview-panel__inner">
             {qvImages.length > 0 && (
-              <div className="quickview-panel__image">
+              <div
+                className="quickview-panel__image"
+                onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+                onTouchEnd={(e) => {
+                  if (touchStartX.current === null) return;
+                  const dx = e.changedTouches[0].clientX - touchStartX.current;
+                  touchStartX.current = null;
+                  if (Math.abs(dx) < 30) return;
+                  if (dx < 0) setActiveImgIdx((n) => (n + 1) % qvImages.length);
+                  else setActiveImgIdx((n) => (n - 1 + qvImages.length) % qvImages.length);
+                }}
+              >
                 {qvActiveImg && (
                   <Image
                     alt={qvActiveImg.altText || product.title}
