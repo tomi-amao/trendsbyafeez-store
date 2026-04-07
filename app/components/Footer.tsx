@@ -1,5 +1,5 @@
 import {Suspense} from 'react';
-import {Await, NavLink} from 'react-router';
+import {Await, NavLink, useFetcher} from 'react-router';
 import type {FooterQuery, HeaderQuery} from 'storefrontapi.generated';
 
 interface FooterProps {
@@ -18,6 +18,46 @@ function MarqueeDivider() {
         <span className="marquee-divider__text" aria-hidden="true">{repeated}</span>
       </div>
     </div>
+  );
+}
+
+function NewsletterForm() {
+  const fetcher = useFetcher<{success: boolean; error?: string}>();
+  const isSubmitting = fetcher.state === 'submitting';
+  const result = fetcher.data;
+
+  if (result?.success) {
+    return (
+      <p className="footer__newsletter-success">
+        Check your inbox to confirm your subscription.
+      </p>
+    );
+  }
+
+  return (
+    <fetcher.Form
+      method="post"
+      action="/api/newsletter"
+      className="footer__newsletter-form"
+    >
+      <input type="hidden" name="tags" value="TBA SIGN UPS" />
+      <input
+        type="email"
+        name="email"
+        placeholder="Enter your email"
+        aria-label="Email for newsletter"
+        required
+        disabled={isSubmitting}
+      />
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? '...' : 'Sign Up'}
+      </button>
+      {result?.error && (
+        <p className="footer__newsletter-error" role="alert">
+          {result.error}
+        </p>
+      )}
+    </fetcher.Form>
   );
 }
 
@@ -45,14 +85,7 @@ export function Footer({
                 >
                   
                 </p>
-                <div className="footer__newsletter-form">
-                  <input
-                    type="email"
-                    placeholder="Enter your email"
-                    aria-label="Email for newsletter"
-                  />
-                  <button type="button">Sign Up</button>
-                </div>
+                <NewsletterForm />
               </div>
               <div className="footer__col">
                 <h3>Shop</h3>

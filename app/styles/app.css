@@ -2697,6 +2697,30 @@ html[data-header-state="hidden"] .collection-controls {
   opacity: 0.8;
 }
 
+.footer__newsletter-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.footer__newsletter-form input:disabled {
+  opacity: 0.5;
+}
+
+.footer__newsletter-success {
+  font-size: 0.75rem;
+  color: var(--color-light);
+  opacity: 0.9;
+  line-height: 1.5;
+}
+
+.footer__newsletter-error {
+  font-size: 0.7rem;
+  color: #ff6b6b;
+  margin: 0.4rem 0 0;
+  line-height: 1.4;
+  width: 100%;
+}
+
 .footer__col h3 {
   font-size: 0.65rem;
   font-weight: 700;
