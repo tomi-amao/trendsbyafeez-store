@@ -32,13 +32,8 @@ function getLineItemChildrenMap(lines: CartLine[]): LineItemChildrenMap {
   }
   return children;
 }
-/**
- * The main cart component that displays the cart items and summary.
- * It is used by both the /cart route and the cart aside dialog.
- */
+
 export function CartMain({layout, cart: originalCart}: CartMainProps) {
-  // The useOptimisticCart hook applies pending actions to the cart
-  // so the user immediately sees feedback when they modify the cart.
   const cart = useOptimisticCart(originalCart);
 
   const linesCount = Boolean(cart?.lines?.nodes?.length || 0);
@@ -56,13 +51,12 @@ export function CartMain({layout, cart: originalCart}: CartMainProps) {
     >
       <CartEmpty hidden={linesCount} layout={layout} />
       <div className="cart-details">
-        <p id="cart-lines" className="sr-only">
-          Line items
-        </p>
-        <div>
-          <ul aria-labelledby="cart-lines">
+        <div className="cart-lines-wrapper">
+          <p id="cart-lines" className="sr-only">
+            Line items
+          </p>
+          <ul className="cart-lines" aria-labelledby="cart-lines">
             {(cart?.lines?.nodes ?? []).map((line) => {
-              // we do not render non-parent lines at the root of the cart
               if (
                 'parentRelationship' in line &&
                 line.parentRelationship?.parent
@@ -88,22 +82,33 @@ export function CartMain({layout, cart: originalCart}: CartMainProps) {
 
 function CartEmpty({
   hidden = false,
+  layout,
 }: {
   hidden: boolean;
   layout?: CartMainProps['layout'];
 }) {
   const {close} = useAside();
   return (
-    <div hidden={hidden}>
-      <br />
-      <p>
-        Looks like you haven&rsquo;t added anything yet, let&rsquo;s get you
-        started!
-      </p>
-      <br />
-      <Link to="/collections" onClick={close} prefetch="viewport">
-        Continue shopping →
-      </Link>
+    <div hidden={hidden} className="cart-empty">
+      <div className="cart-empty__inner">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{opacity: 0.2, marginBottom: '1.5rem'}}>
+          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <path d="M16 10a4 4 0 01-8 0" />
+        </svg>
+        <p className="cart-empty__title">Your cart is empty</p>
+        <p className="cart-empty__subtitle">
+          Looks like you haven&rsquo;t added anything yet.
+        </p>
+        <Link
+          to="/collections"
+          onClick={close}
+          prefetch="viewport"
+          className="cart-empty__cta"
+        >
+          Continue Shopping
+        </Link>
+      </div>
     </div>
   );
 }

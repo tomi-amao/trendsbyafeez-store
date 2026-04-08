@@ -19,6 +19,23 @@ export default async function handleRequest(
       checkoutDomain: context.env.PUBLIC_CHECKOUT_DOMAIN,
       storeDomain: context.env.PUBLIC_STORE_DOMAIN,
     },
+    connectSrc: [
+      'https://cdn.jsdelivr.net',
+      'https://lottie.host',
+      'https://unpkg.com',
+    ],
+    // Mirrors Hydrogen's defaultSrc origins so the explicit script-src
+    // directive doesn't drop any CDN domains that were previously covered
+    // by the default-src fallback. 'wasm-unsafe-eval' is required for
+    // WebAssembly.instantiateStreaming (used by @lottiefiles/dotlottie-web).
+    scriptSrc: [
+      "'self'",
+      "'wasm-unsafe-eval'",
+      'https://cdn.shopify.com',
+      'https://shopify.com',
+      'https://cdn.jsdelivr.net',
+    ],
+    workerSrc: ["'self'", 'blob:'],
   });
 
   const body = await renderToReadableStream(
@@ -45,6 +62,11 @@ export default async function handleRequest(
 
   responseHeaders.set('Content-Type', 'text/html');
   responseHeaders.set('Content-Security-Policy', header);
+  responseHeaders.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  responseHeaders.set('X-Content-Type-Options', 'nosniff');
+  responseHeaders.set('X-Frame-Options', 'SAMEORIGIN');
+  responseHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  responseHeaders.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
   return new Response(body, {
     headers: responseHeaders,

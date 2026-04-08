@@ -26,6 +26,7 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
   const [{collections}] = await Promise.all([
     context.storefront.query(COLLECTIONS_QUERY, {
       variables: paginationVariables,
+      cache: context.storefront.CacheShort(),
     }),
     // Add other queries here, so that they are loaded in parallel
   ]);
@@ -46,8 +47,13 @@ export default function Collections() {
   const {collections} = useLoaderData<typeof loader>();
 
   return (
-    <div className="collections">
-      <h1>Collections</h1>
+    <div className="collection">
+      {/* Hero-style header */}
+      <div className="collection-page-header">
+        <p className="collection-page-header__eyebrow">Browse</p>
+        <h1 className="collection-page-header__title">Collections</h1>
+        <div className="collection-page-header__rule" />
+      </div>
       <PaginatedResourceSection<CollectionFragment>
         connection={collections}
         resourcesClassName="collections-grid"
@@ -73,7 +79,7 @@ function CollectionItem({
 }) {
   return (
     <Link
-      className="collection-item"
+      className="collection-showcase__card"
       key={collection.id}
       to={`/collections/${collection.handle}`}
       prefetch="intent"
@@ -81,13 +87,24 @@ function CollectionItem({
       {collection?.image && (
         <Image
           alt={collection.image.altText || collection.title}
-          aspectRatio="1/1"
           data={collection.image}
           loading={index < 3 ? 'eager' : undefined}
-          sizes="(min-width: 45em) 400px, 100vw"
+          sizes="(min-width: 768px) 33vw, 50vw"
+          className="collection-showcase__image"
         />
       )}
-      <h5>{collection.title}</h5>
+      <div className="collection-showcase__overlay" />
+      <div className="collection-showcase__content">
+        <span className="collection-showcase__label">{collection.title}</span>
+        {collection.description && (
+          <p className="collection-showcase__desc">
+            {collection.description.length > 80
+              ? collection.description.slice(0, 80) + '\u2026'
+              : collection.description}
+          </p>
+        )}
+        <span className="collection-showcase__cta">Shop Now</span>
+      </div>
     </Link>
   );
 }
@@ -97,6 +114,7 @@ const COLLECTIONS_QUERY = `#graphql
     id
     title
     handle
+    description
     image {
       id
       url

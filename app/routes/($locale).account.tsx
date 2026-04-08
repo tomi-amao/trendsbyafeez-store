@@ -37,52 +37,43 @@ export async function loader({context}: Route.LoaderArgs) {
 export default function AccountLayout() {
   const {customer} = useLoaderData<typeof loader>();
 
-  const heading = customer
+  const greeting = customer
     ? customer.firstName
-      ? `Welcome, ${customer.firstName}`
-      : `Welcome to your account.`
-    : 'Account Details';
+      ? customer.firstName
+      : 'My Account'
+    : 'Account';
 
   return (
-    <div className="account">
-      <h1>{heading}</h1>
-      <br />
-      <AccountMenu />
-      <br />
-      <br />
-      <Outlet context={{customer}} />
+    <div className="account-layout">
+      <aside className="account-sidebar">
+        <div className="account-sidebar__header">
+          <p className="account-sidebar__eyebrow">Welcome</p>
+          <h1 className="account-sidebar__greeting">{greeting}</h1>
+        </div>
+        <AccountMenu />
+      </aside>
+      <main className="account-main">
+        <Outlet context={{customer}} />
+      </main>
     </div>
   );
 }
 
 function AccountMenu() {
-  function isActiveStyle({
-    isActive,
-    isPending,
-  }: {
-    isActive: boolean;
-    isPending: boolean;
-  }) {
-    return {
-      fontWeight: isActive ? 'bold' : undefined,
-      color: isPending ? 'grey' : 'black',
-    };
-  }
+  const linkClass = ({isActive}: {isActive: boolean; isPending: boolean}) =>
+    `account-nav__link${isActive ? ' account-nav__link--active' : ''}`;
 
   return (
-    <nav role="navigation">
-      <NavLink to="/account/orders" style={isActiveStyle}>
-        Orders &nbsp;
+    <nav className="account-nav" aria-label="Account navigation">
+      <NavLink to="/account/orders" className={linkClass}>
+        Orders
       </NavLink>
-      &nbsp;|&nbsp;
-      <NavLink to="/account/profile" style={isActiveStyle}>
-        &nbsp; Profile &nbsp;
+      {/* <NavLink to="/account/profile" className={linkClass}>
+        Profile
       </NavLink>
-      &nbsp;|&nbsp;
-      <NavLink to="/account/addresses" style={isActiveStyle}>
-        &nbsp; Addresses &nbsp;
-      </NavLink>
-      &nbsp;|&nbsp;
+      <NavLink to="/account/addresses" className={linkClass}>
+        Addresses
+      </NavLink> */}
       <Logout />
     </nav>
   );
@@ -91,7 +82,9 @@ function AccountMenu() {
 function Logout() {
   return (
     <Form className="account-logout" method="POST" action="/account/logout">
-      &nbsp;<button type="submit">Sign out</button>
+      <button type="submit" className="account-nav__link account-nav__link--logout">
+        Sign out
+      </button>
     </Form>
   );
 }

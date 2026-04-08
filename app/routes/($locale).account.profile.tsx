@@ -7,6 +7,7 @@ import {
   useActionData,
   useNavigation,
   useOutletContext,
+  type HeadersFunction,
 } from 'react-router';
 import type {Route} from './+types/account.profile';
 
@@ -18,6 +19,8 @@ export type ActionResponse = {
 export const meta: Route.MetaFunction = () => {
   return [{title: 'Profile'}];
 };
+
+export const headers: HeadersFunction = ({parentHeaders}) => parentHeaders;
 
 export async function loader({context}: Route.LoaderArgs) {
   await context.customerAccount.handleAuthStatus();

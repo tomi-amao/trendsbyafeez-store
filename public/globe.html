@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>TrendsByAfeez — Globe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #fff; }
+  canvas { display: block; }
+
+  #tooltip {
+    position: fixed;
+    pointer-events: none;
+    padding: 10px 18px;
+    background: rgba(8,8,12,0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(245,197,108,0.2);
+    border-radius: 10px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 100;
+    white-space: nowrap;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  #tooltip.visible { opacity: 1; transform: translateY(0); }
+  #tooltip .country-name {
+    font-weight: 700; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.14em; color: rgba(245,197,108,0.7); margin-bottom: 5px;
+  }
+  #tooltip .phrase { font-size: 16px; font-weight: 300; font-style: italic; color: #f5f0e8; }
+
+  #loader {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 20px;
+    background: #000; z-index: 200; transition: opacity 0.9s ease;
+  }
+  #loader.hidden { opacity: 0; pointer-events: none; }
+  #loader-ring {
+    width: 32px; height: 32px;
+    border: 1.5px solid rgba(255,255,255,0.07);
+    border-top-color: rgba(245,197,108,0.6);
+    border-radius: 50%; animation: spin 0.85s linear infinite;
+  }
+  #loader span { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.3); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #hint {
+    position: fixed; bottom: 190px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; letter-spacing: 0.07em; color: rgba(255,255,255,0.2);
+    pointer-events: none; transition: opacity 1.2s ease; white-space: nowrap;
+  }
+  #hint.hidden { opacity: 0; }
+
+  /* Ring text canvas — sits behind UI but above Three.js canvas */
+  #ring-canvas {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 10;
+  }
+
+  /* ── Flip Clock ── */
+  #countdown {
+    position: fixed; top: 22px; left: 50%; transform: translateX(-50%);
+    text-align: center; z-index: 50; pointer-events: none;
+  }
+  .cd-label {
+    font-size: 8px; letter-spacing: 0.30em; font-weight: 400;
+    color: rgba(255,255,255,0.88); margin-bottom: 10px;
+    font-family: 'Inter', system-ui, sans-serif; text-transform: uppercase;
+  }
+  .cd-timer { display: flex; align-items: flex-end; justify-content: center; gap: 4px; }
+  .cd-sep {
+    font-size: 24px; font-weight: 200; color: rgba(255,255,255,0.88); line-height: 1;
+    padding-bottom: 13px; font-family: 'Inter', system-ui, sans-serif;
+  }
+  .flip-unit { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .flip-unit small {
+    font-size: 7px; letter-spacing: 0.14em; font-weight: 400;
+    color: rgba(255,255,255,0.88); font-family: 'Inter', system-ui, sans-serif;
+    text-transform: uppercase;
+  }
+  .flip-card { width: 50px; height: 58px; perspective: 400px; }
+  .fc-face {
+    width: 100%; height: 100%; border-radius: 5px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 34px; font-weight: 200; color: rgba(255,255,255,0.88);
+    font-variant-numeric: tabular-nums;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.03em;
+  }
+  @keyframes fcFlip {
+    0%   { transform: rotateX(0deg);   opacity: 1; }
+    40%  { transform: rotateX(-90deg); opacity: 0; }
+    60%  { transform: rotateX(-90deg); opacity: 0; }
+    100% { transform: rotateX(0deg);   opacity: 1; }
+  }
+  .flip-card.flipping .fc-face { animation: fcFlip 0.38s cubic-bezier(0.4,0,0.2,1) both; }
+
+  /* ── Email signup — minimal ── */
+  #email-bar {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    z-index: 50; display: flex; align-items: center;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 40px;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    padding: 3px 3px 3px 22px;
+  }
+  #email-bar input {
+    background: transparent; border: none; outline: none;
+    color: rgba(255,255,255,0.78); font-size: 16px; font-weight: 300;
+    letter-spacing: 0.01em;
+    padding: 10px 0; width: 230px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  #email-bar input::placeholder { color: rgba(255,255,255,0.22); }
+  #email-bar button {
+    background: rgba(255,255,255,0.88); color: #000;
+    border: none; border-radius: 36px;
+    cursor: pointer;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.03em;
+    padding: 11px 20px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  #email-bar button:hover { background: #fff; }
+
+  @keyframes barCollapse {
+    0%   { transform: translateX(-50%) scaleX(1)    scaleY(1);   opacity: 1; }
+    50%  { transform: translateX(-50%) scaleX(0.08) scaleY(0.5); opacity: 1; }
+    100% { transform: translateX(-50%) scaleX(0)    scaleY(0);   opacity: 0; }
+  }
+  #email-bar.collapsing {
+    animation: barCollapse 0.45s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+    pointer-events: none;
+  }
+  @keyframes barExpand {
+    0%   { transform: translateX(-50%) scaleX(0)    scaleY(0);   opacity: 0; }
+    50%  { transform: translateX(-50%) scaleX(0.08) scaleY(0.5); opacity: 1; }
+    100% { transform: translateX(-50%) scaleX(1)    scaleY(1);   opacity: 1; }
+  }
+  #email-bar.expanding {
+    animation: barExpand 0.45s cubic-bezier(0, 0.55, 0.45, 1) forwards;
+  }
+
+  /* ── Locked-in gif overlay ── */
+  #locked-in {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    z-index: 51; display: none; flex-direction: column;
+    align-items: center; gap: 10px; pointer-events: none;
+  }
+  #locked-in.show {
+    display: flex;
+    animation: lockedFadeIn 0.45s 0.1s ease both;
+  }
+  #locked-in.hide {
+    animation: lockedFadeOut 0.5s ease forwards;
+  }
+  @keyframes lockedFadeIn {
+    from { opacity: 0; transform: translateX(-50%) scale(0.75); }
+    to   { opacity: 1; transform: translateX(-50%) scale(1); }
+  }
+  @keyframes lockedFadeOut {
+    from { opacity: 1; transform: translateX(-50%) scale(1); }
+    to   { opacity: 0; transform: translateX(-50%) scale(0.85); }
+  }
+  #locked-in img {
+    max-height: 160px; max-width: 260px;
+    border: none;
+    display: block;
+  }
+  #locked-in span {
+    font-size: 8px; letter-spacing: 0.30em; font-weight: 700;
+    color: #fff; font-family: 'Orbitron', system-ui, sans-serif;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<div id="loader"><div id="loader-ring"></div><span>Loading globe…</span></div>
+<div id="tooltip"><div class="country-name"></div><div class="phrase"></div></div>
+<div id="hint">Click a highlighted country to fly there</div>
+
+<div id="countdown">
+  <div class="cd-label">Next Drop</div>
+  <div class="cd-timer">
+    <div class="flip-unit">
+      <div class="flip-card" id="fc-d"><div class="fc-face">--</div></div>
+      <small>Days</small>
+    </div>
+    <!-- <span class="cd-sep">:</span> -->
+    <div class="flip-unit">
+      <div class="flip-card" id="fc-h"><div class="fc-face">--</div></div>
+      <small>Hrs</small>
+    </div>
+    <!-- <span class="cd-sep">:</span> -->
+    <div class="flip-unit">
+      <div class="flip-card" id="fc-m"><div class="fc-face">--</div></div>
+      <small>Min</small>
+    </div>
+    <!-- <span class="cd-sep">:</span> -->
+    <div class="flip-unit">
+      <div class="flip-card" id="fc-s"><div class="fc-face">--</div></div>
+      <small>Sec</small>
+    </div>
+  </div>
+</div>
+
+<form id="email-bar" autocomplete="off">
+  <input type="email" id="email-input" placeholder="Enter your email" required />
+  <button type="submit">LOCK IN</button>
+</form>
+
+<div id="locked-in">
+  <img src="./locked_in.gif" alt="locked in" />
+  <span>You're locked in</span>
+</div>
+
+<canvas id="ring-canvas"></canvas>
+<div id="globe-container"></div>
+
+<!-- d3 UMD bundle loaded first so window.d3 is available to the ES module below -->
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const d3geo = window.d3;
+
+/* ═══════════════════════════════════════════════════════════════
+   CONFIG
+   ═══════════════════════════════════════════════════════════════ */
+const GLOBE_R  = 5;
+const isMobile = innerWidth < 768;
+
+const TARGETS = {
+  // phrase = "I was never here" in local language (tooltip + ALT compass text)
+  // saw    = "IF YOU SAW ME"    in local language (PRIMARY compass text when landed)
+  FRA: { name: 'France',         phrase: "Je n'étais jamais ici",   saw: "SI TU M'AS VU",    lat: 46.60, lon:   2.35 },
+  ARE: { name: 'UAE (Dubai)',     phrase: 'لم أكن هنا أبداً',        saw: 'إن رأيتني',       lat: 25.28, lon:  55.30 },
+  GBR: { name: 'United Kingdom', phrase: 'I WAS NEVER HERE',        saw: 'IF YOU SAW ME',   lat: 51.51, lon:  -0.13 },
+  ZAF: { name: 'South Africa',   phrase: 'Angikaze ngibe lapha',    saw: 'UMA UNGIBONILE',  lat:-26.20, lon:  28.00 },
+  NGA: { name: 'Nigeria',        phrase: "Mi ò wà níbí rárá",        saw: 'TÍ O BÁ RÍ MI',   lat:  9.08, lon:   8.68 },
+  USA: { name: 'New York, USA',  phrase: 'I WAS NEVER HERE', saw: 'IF YOU SAW ME',   lat: 40.71, lon: -74.01 },
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   SCENE
+   ═══════════════════════════════════════════════════════════════ */
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 1000);
+camera.position.set(0, 2, isMobile ? 20 : 14);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+document.getElementById('globe-container').appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping   = true;
+controls.dampingFactor   = 0.06;
+controls.rotateSpeed     = 0.5;
+controls.enableZoom      = true;
+controls.minDistance     = isMobile ? 11 : 8;
+controls.maxDistance     = isMobile ? 30 : 24;
+controls.enablePan       = false;
+controls.autoRotate      = true;
+controls.autoRotateSpeed = 0.3;
+
+// Export camera/controls/globe radius and targets for the overlay canvas script
+window.__globe = { camera, controls, GLOBE_R, TARGETS };
+window.__landedISO = null;
+
+// Lights — balanced for full globe visibility
+scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+scene.add(new THREE.HemisphereLight(0xfff8e0, 0x0a1020, 0.50));
+const sun = new THREE.DirectionalLight(0xfff4e0, 1.4);
+sun.position.set(12, 8, 8);
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x6688bb, 0.5);
+fill.position.set(-10, -2, -8);
+scene.add(fill);
+
+/* ═══════════════════════════════════════════════════════════════
+   STARFIELD
+   ═══════════════════════════════════════════════════════════════ */
+{
+  const N = 8000;
+  const pos = new Float32Array(N * 3);
+  const sz  = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const r  = 100 + Math.random() * 130;
+    const th = Math.random() * Math.PI * 2;
+    const ph = Math.acos(2 * Math.random() - 1);
+    pos[i*3]   = r * Math.sin(ph) * Math.cos(th);
+    pos[i*3+1] = r * Math.sin(ph) * Math.sin(th);
+    pos[i*3+2] = r * Math.cos(ph);
+    sz[i] = 0.3 + Math.random() * 1.8;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('size',     new THREE.BufferAttribute(sz,  1));
+  const starMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: `
+      attribute float size;
+      uniform float uTime;
+      varying float vB;
+      void main() {
+        vB = 0.4 + 0.6 * sin(uTime * 0.5 + position.x * 0.011 + position.z * 0.019);
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = size * (170.0 / -mv.z);
+        gl_Position  = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: `
+      varying float vB;
+      void main() {
+        float d = length(gl_PointCoord - 0.5);
+        if (d > 0.5) discard;
+        float a = smoothstep(0.5, 0.0, d) * (0.3 + 0.7 * vB);
+        gl_FragColor = vec4(0.88, 0.91, 1.0, a);
+      }
+    `,
+    transparent: true, depthWrite: false,
+  });
+  scene.add(new THREE.Points(geo, starMat));
+  window.__starMat = starMat;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GLOBE TEXTURE — drawn on offscreen canvas using D3-geo
+   D3-geo's equirectangular projection handles all polygon winding,
+   antimeridian clipping and projection math correctly.
+   This completely eliminates the triangulation gap issues.
+   ═══════════════════════════════════════════════════════════════ */
+const TEX_W = 4096, TEX_H = 2048;
+const offscreen = document.createElement('canvas');
+offscreen.width  = TEX_W;
+offscreen.height = TEX_H;
+const ctx = offscreen.getContext('2d');
+
+const projection = d3geo.geoEquirectangular()
+  .scale(TEX_W / (2 * Math.PI))
+  .translate([TEX_W / 2, TEX_H / 2])
+  .precision(0.1);
+
+const geoPath = d3geo.geoPath(projection, ctx);
+
+// IDs for FRA, ARE, GBR, ZAF, NGA, USA
+  const TARGET_IDs = new Set(['250', '784', '826', '710', '566', '840']);
+
+// The material ref so we can trigger texture updates
+let globeMat = null;
+
+// Saved base pixels for restoring before highlight redraws
+let basePixels = null;
+
+function drawBase(features, landFeature) {
+  // Ocean
+  ctx.fillStyle = '#060810';
+  ctx.fillRect(0, 0, TEX_W, TEX_H);
+
+  // All land — dark blue-grey base
+  if (landFeature) {
+    ctx.beginPath();
+    geoPath(landFeature);
+    ctx.fillStyle = '#181c2c';
+    ctx.fill();
+  }
+
+  // Individual country fills — slightly lighter to show separation
+  for (const f of features) {
+    ctx.beginPath();
+    geoPath(f.geometry);
+    ctx.fillStyle = '#1c2030';
+    ctx.fill();
+  }
+
+  // Country borders
+  ctx.beginPath();
+  for (const f of features) geoPath(f.geometry);
+  ctx.strokeStyle = 'rgba(55,62,100,0.85)';
+  ctx.lineWidth   = 0.5;
+  ctx.stroke();
+
+  // Target countries — warm tint base state
+  const targetFeats = features.filter(f => TARGET_IDs.has(String(f.id)));
+  ctx.beginPath();
+  for (const f of targetFeats) geoPath(f.geometry);
+  ctx.fillStyle = 'rgba(245,197,108,0.10)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(245,197,108,0.30)';
+  ctx.lineWidth   = 0.9;
+  ctx.stroke();
+
+  // Very faint graticule lines
+  const graticule = d3geo.geoGraticule()();
+  ctx.beginPath();
+  geoPath(graticule);
+  ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+  ctx.lineWidth   = 0.4;
+  ctx.stroke();
+}
+
+function redrawHighlight(isoToHighlight, features) {
+  if (!basePixels) return;
+  ctx.putImageData(basePixels, 0, 0);
+
+  if (isoToHighlight) {
+    const idEntry = { FRA: '250', ARE: '784', GBR: '826', ZAF: '710', NGA: '566', USA: '840' }[isoToHighlight];
+    if (!idEntry) return;
+    const ff = features.filter(f => String(f.id) === idEntry);
+
+    // Soft outer glow
+    ctx.save();
+    ctx.shadowColor = 'rgba(245,197,108,0.9)';
+    ctx.shadowBlur  = 60;
+    ctx.beginPath();
+    for (const f of ff) geoPath(f.geometry);
+    ctx.fillStyle = 'rgba(245,197,108,0.0)';
+    ctx.fill();
+    ctx.restore();
+
+    // Fill
+    ctx.beginPath();
+    for (const f of ff) geoPath(f.geometry);
+    ctx.fillStyle = 'rgba(245,197,108,0.55)';
+    ctx.fill();
+
+    // Bright border
+    ctx.beginPath();
+    for (const f of ff) geoPath(f.geometry);
+    ctx.strokeStyle = 'rgba(255,225,140,0.95)';
+    ctx.lineWidth   = 2.5;
+    ctx.stroke();
+  }
+
+  if (globeMat?.map) globeMat.map.needsUpdate = true;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOPOJSON → GEOJSON  (zero-dep)
+   ═══════════════════════════════════════════════════════════════ */
+function topoFeatures(topo, obj) {
+  const { arcs, transform } = topo;
+
+  function decode(idx) {
+    const rev = idx < 0;
+    const raw = arcs[rev ? ~idx : idx];
+    let x = 0, y = 0;
+    const pts = raw.map(([dx, dy]) => {
+      x += dx; y += dy;
+      if (transform) {
+        return [x * transform.scale[0] + transform.translate[0],
+                y * transform.scale[1] + transform.translate[1]];
+      }
+      return [x, y];
+    });
+    return rev ? [...pts].reverse() : pts;
+  }
+
+  function ring(indices) {
+    let c = [];
+    for (const i of indices) {
+      const a = decode(i);
+      c = c.concat(c.length ? a.slice(1) : a);
+    }
+    return c;
+  }
+
+  return (obj.geometries || []).map((geo) => {
+    let geometry;
+    if (geo.type === 'Polygon') {
+      geometry = { type: 'Polygon', coordinates: geo.arcs.map(ring) };
+    } else if (geo.type === 'MultiPolygon') {
+      geometry = { type: 'MultiPolygon', coordinates: geo.arcs.map(p => p.map(ring)) };
+    } else {
+      return null;
+    }
+    return { id: geo.id, geometry };
+  }).filter(Boolean);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HELPER — lat/lon → vec3
+   Convention: The Three.js sphere UV starts with lon 0 → +x.
+   We offset globe mesh by -PI/2 to align with our ll2v mapping.
+   ═══════════════════════════════════════════════════════════════ */
+function ll2v(lat, lon, r) {
+  const phi   = (90 - lat) * (Math.PI / 180);
+  const theta = (lon + 180) * (Math.PI / 180);
+  return new THREE.Vector3(
+    -r * Math.sin(phi) * Math.cos(theta),
+     r * Math.cos(phi),
+     r * Math.sin(phi) * Math.sin(theta),
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PLANE MODEL — loaded from plane.glb
+   Container group uses lookAt(); inner model rotated so nose
+   aligns to container -Z for correct lookAt orientation.
+   ═══════════════════════════════════════════════════════════════ */
+const plane = new THREE.Group();
+plane.visible = false;
+plane.scale.setScalar(isMobile ? 0.06 : 0.08);
+scene.add(plane);
+
+{
+  const loader = new GLTFLoader();
+  loader.load('./jet.glb', (gltf) => {
+    const model = gltf.scene;
+    // glTF spec: -Z is forward, which matches Three.js lookAt's -Z target axis.
+    // No Y rotation needed — nose already aligns with the flight direction.
+    plane.add(model);
+  });
+}
+
+
+
+/* ═══════════════════════════════════════════════════════════════
+   GREAT-CIRCLE ARC
+   ═══════════════════════════════════════════════════════════════ */
+function greatArc(from, to, alt = 0.15, steps = 160) {
+  const a  = from.clone().normalize();
+  const b  = to.clone().normalize();
+  const om = Math.acos(THREE.MathUtils.clamp(a.dot(b), -1, 1));
+  return Array.from({ length: steps + 1 }, (_, i) => {
+    const t = i / steps;
+    const p = om < 0.001
+      ? a.clone()
+      : a.clone().multiplyScalar(Math.sin((1 - t) * om) / Math.sin(om))
+          .add(b.clone().multiplyScalar(Math.sin(t * om) / Math.sin(om)));
+    // Base offset of 0.012 keeps the plane above the surface at all times (incl. start/end)
+    return p.multiplyScalar(GLOBE_R * (1 + 0.012 + alt * Math.sin(t * Math.PI)));
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PLANE FLIGHT STATE — smooth time-based with lookAt orientation
+   ═══════════════════════════════════════════════════════════════ */
+let planeRoute     = [];
+let planeFlying    = false;
+let currentISO     = null;
+let arcMesh        = null, arcMat = null;
+let travelMesh     = null, travelGeo = null, travelMat = null;
+let flightT        = 0;
+let flightDuration = 8;
+let prevFrameTime  = performance.now();
+let prevTangent    = new THREE.Vector3(0, 0, 1);
+let smoothBank     = 0;
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function flyTo(iso) {
+  const dest = TARGETS[iso];
+  // Do nothing if already at this country (landed or flying there)
+  if (!dest || iso === currentISO) return;
+  window.__landedISO = null;  // plane is airborne
+  controls.autoRotate = false;
+
+  const dstPos = ll2v(dest.lat, dest.lon, GLOBE_R);
+  let srcPos;
+  if (currentISO && TARGETS[currentISO]) {
+    srcPos = ll2v(TARGETS[currentISO].lat, TARGETS[currentISO].lon, GLOBE_R);
+  } else if (plane.visible) {
+    srcPos = plane.position.clone().normalize().multiplyScalar(GLOBE_R);
+  } else {
+    srcPos = camera.position.clone().normalize().multiplyScalar(GLOBE_R);
+  }
+
+  // Flight duration scales with arc angle (5-14 seconds)
+  const aN = srcPos.clone().normalize();
+  const bN = dstPos.clone().normalize();
+  const arcAngle = Math.acos(THREE.MathUtils.clamp(aN.dot(bN), -1, 1));
+  flightDuration = THREE.MathUtils.clamp(5 + (arcAngle / Math.PI) * 9, 5, 14);
+
+  const STEPS = 200;
+  planeRoute  = greatArc(srcPos, dstPos, 0.18, STEPS);
+  flightT     = 0;
+  smoothBank  = 0;
+  planeFlying = true;
+  currentISO  = iso;
+  plane.visible = true;
+  plane.position.copy(planeRoute[0]);
+
+  // Seed initial tangent
+  if (planeRoute.length > 1) {
+    prevTangent.copy(planeRoute[1]).sub(planeRoute[0]).normalize();
+  }
+
+  // Remove old arcs
+  if (arcMesh)    { scene.remove(arcMesh);    arcMesh = arcMat = null; }
+  if (travelMesh) { scene.remove(travelMesh); travelMesh = travelGeo = travelMat = null; }
+
+  // Full route line — faint
+  arcMat  = new THREE.LineBasicMaterial({ color: 0x8899aa, transparent: true, opacity: 0.15 });
+  arcMesh = new THREE.Line(new THREE.BufferGeometry().setFromPoints(planeRoute), arcMat);
+  scene.add(arcMesh);
+
+  // Progressive travel line — gold
+  travelGeo = new THREE.BufferGeometry().setFromPoints(planeRoute);
+  travelGeo.setDrawRange(0, 1);
+  travelMat = new THREE.LineBasicMaterial({ color: 0xf5c56c, transparent: true, opacity: 0.85 });
+  travelMesh = new THREE.Line(travelGeo, travelMat);
+  scene.add(travelMesh);
+}
+
+function stepPlane(dt) {
+  if (!planeFlying||planeRoute.length<2)return;
+
+  flightT += dt / flightDuration;
+  const N = planeRoute.length - 1;
+
+  if (flightT >= 1.0) {
+    flightT = 1.0;
+    planeFlying = false;
+
+    // Land at final position
+    const finalPos = planeRoute[N];
+    plane.position.copy(finalPos);
+
+    // Orient flat above the surface: project the final tangent onto the
+    // surface tangent plane (strip its radial component) so the nose
+    // points along the flight heading but the plane stays level.
+    const radUp  = finalPos.clone().normalize();
+    const lastTan = planeRoute[N].clone().sub(planeRoute[Math.max(0, N - 3)]).normalize();
+    const flatTan = lastTan.clone().addScaledVector(radUp, -lastTan.dot(radUp)).normalize();
+    plane.up.copy(radUp);
+    plane.lookAt(finalPos.clone().add(flatTan));
+
+    // Fade arcs
+    const fadeArcs = () => {
+      let op = 1.0;
+      const tick = () => {
+        op -= 0.015;
+        if (arcMat)    arcMat.opacity    = Math.max(0, 0.15 * op);
+        if (travelMat) travelMat.opacity = Math.max(0, 0.85 * op);
+        if (op > 0) requestAnimationFrame(tick);
+        else {
+          if (arcMesh)    { scene.remove(arcMesh);    arcMesh    = arcMat    = null; }
+          if (travelMesh) { scene.remove(travelMesh); travelMesh = travelGeo = travelMat = null; }
+        }
+      };
+      requestAnimationFrame(tick);
+    };
+    window.__landedISO = currentISO;  // plane has touched down
+    setTimeout(fadeArcs, 500);
+    controls.autoRotate = true;
+    return;
+  }
+
+  // Eased progress
+  const easedT = easeInOutCubic(flightT);
+  const rawIdx = easedT * N;
+  const idx0   = Math.floor(rawIdx);
+  const idx1   = Math.min(idx0 + 1, N);
+  const frac   = rawIdx - idx0;
+
+  // Smooth position
+  const pos = planeRoute[idx0].clone().lerp(planeRoute[idx1], frac);
+  plane.position.copy(pos);
+
+  // Progressive arc
+  if (travelGeo) travelGeo.setDrawRange(0, Math.floor(easedT * N) + 2);
+
+  // Look-ahead tangent (3 steps ahead for stability)
+  const lookAhead = Math.min(rawIdx + 3, N);
+  const la0 = Math.floor(lookAhead);
+  const la1 = Math.min(la0 + 1, N);
+  const aheadPos = planeRoute[la0].clone().lerp(planeRoute[la1], lookAhead - la0);
+  const tangent = aheadPos.clone().sub(pos);
+  if (tangent.lengthSq() < 1e-8) tangent.copy(prevTangent);
+  else tangent.normalize();
+
+  // Bank from turn rate (cross product of heading change dot radial up)
+  const cross = new THREE.Vector3().crossVectors(prevTangent, tangent);
+  const radUp = pos.clone().normalize();
+  const turnRate = cross.dot(radUp);
+  const targetBank = THREE.MathUtils.clamp(turnRate * 600, -0.45, 0.45);
+  smoothBank = THREE.MathUtils.lerp(smoothBank, targetBank, 0.06);
+  prevTangent.copy(tangent);
+
+  // Orient with lookAt (robust, handles all edge cases)
+  plane.up.copy(radUp);
+  plane.lookAt(pos.clone().add(tangent));
+
+  // Apply bank roll around forward axis
+  plane.rotateZ(smoothBank);
+}
+
+
+
+/* ═══════════════════════════════════════════════════════════════
+   INTERACTION — hover & click via sphere raycast + d3 point-in-polygon
+   ═══════════════════════════════════════════════════════════════ */
+const raycaster   = new THREE.Raycaster();
+const mouse       = new THREE.Vector2();
+let   globeSphere = null;
+let   hoveredISO  = null;
+let   targetFeats = null;
+
+const tooltip  = document.getElementById('tooltip');
+const ttName   = tooltip.querySelector('.country-name');
+const ttPhrase = tooltip.querySelector('.phrase');
+let cachedFeatures = null;
+
+function showTooltip(iso, x, y) {
+  ttName.textContent   = TARGETS[iso].name;
+  ttPhrase.textContent = TARGETS[iso].phrase;
+  tooltip.classList.add('visible');
+  tooltip.style.left = (x + 20) + 'px';
+  tooltip.style.top  = (y - 14) + 'px';
+}
+function hideTooltip() { tooltip.classList.remove('visible'); }
+
+function lonLatFromHit(pt) {
+  // rotation.y = 0 so world-space == local-space.
+  // ll2v: x=-sin(phi)*cos(theta), z=sin(phi)*sin(theta), theta=(lon+180)*PI/180
+  // → lon = -atan2(pt.z, pt.x) * 180/PI
+  const lat    = 90 - Math.acos(THREE.MathUtils.clamp(pt.y, -1, 1)) * (180 / Math.PI);
+  const lonDeg = -Math.atan2(pt.z, pt.x) * (180 / Math.PI);
+  return [lonDeg, lat];
+}
+
+function checkHover(cx, cy) {
+  if (!globeSphere || !targetFeats) return null;
+  mouse.x =  (cx / innerWidth)  * 2 - 1;
+  mouse.y = -(cy / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObject(globeSphere, false);
+  if (!hits.length) return null;
+  const [lon, lat] = lonLatFromHit(hits[0].point.clone().normalize());
+  for (const f of targetFeats) {
+    if (d3geo.geoContains(f.geometry, [lon, lat])) {
+      return { '250':'FRA','784':'ARE','826':'GBR','710':'ZAF','566':'NGA','840':'USA' }[String(f.id)] ?? null;
+    }
+  }
+  return null;
+}
+
+window.addEventListener('pointermove', (e) => {
+  // Skip on touch — hover doesn't exist on touch devices
+  if (e.pointerType === 'touch') return;
+  const found = checkHover(e.clientX, e.clientY);
+  if (found !== hoveredISO) {
+    hoveredISO = found;
+    redrawHighlight(found, cachedFeatures || []);
+  }
+  window.__hoveredISO = found; // expose to overlay canvas
+  if (found) { showTooltip(found, e.clientX, e.clientY); document.body.style.cursor = 'pointer'; }
+  else       { hideTooltip(); document.body.style.cursor = ''; }
+}, { passive: true });
+
+// Track pointer-down position to distinguish tap from drag
+let pointerDownX = 0, pointerDownY = 0;
+window.addEventListener('pointerdown', (e) => {
+  pointerDownX = e.clientX;
+  pointerDownY = e.clientY;
+}, { passive: true });
+
+window.addEventListener('click', (e) => {
+  // On touch, re-raycast at the tap position (hoveredISO won't be set from pointermove)
+  const dx = e.clientX - pointerDownX;
+  const dy = e.clientY - pointerDownY;
+  const isTap = Math.sqrt(dx * dx + dy * dy) < 10;
+  if (!isTap) return;
+
+  const iso = checkHover(e.clientX, e.clientY) || hoveredISO;
+  if (iso) flyTo(iso);
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════ */
+async function init() {
+  // Fetch drop date from environment variable via API
+  let dropDateStr = '2026-04-15T00:00:00';
+  try {
+    const dropDateRes = await fetch('/api/config');
+    const dropDateData = await dropDateRes.json();
+    dropDateStr = dropDateData.dropDate || dropDateStr;
+  } catch (_) {
+    console.warn('Could not fetch drop date, using default');
+  }
+
+  // Fetch TopoJSON
+  const res  = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+  const topo = await res.json();
+  const features  = topoFeatures(topo, topo.objects.countries);
+  cachedFeatures  = features;
+  targetFeats     = features.filter(f => TARGET_IDs.has(String(f.id)));
+
+  // Convert land topology → single GeoJSON feature for bulk fill
+  // world-atlas "land" is a merge of all countries — produces no country borders
+  function topoLand(topo, obj) {
+    const { arcs, transform } = topo;
+    function decode(idx) {
+      const rev = idx < 0;
+      const raw = arcs[rev ? ~idx : idx];
+      let x = 0, y = 0;
+      const pts = raw.map(([dx, dy]) => {
+        x += dx; y += dy;
+        return transform
+          ? [x * transform.scale[0] + transform.translate[0],
+             y * transform.scale[1] + transform.translate[1]]
+          : [x, y];
+      });
+      return rev ? [...pts].reverse() : pts;
+    }
+    function ring(i) { let c=[]; for(const idx of i){const a=decode(idx);c=c.concat(c.length?a.slice(1):a);} return c; }
+    return {
+      type: 'MultiPolygon',
+      coordinates: (obj.geometries || []).flatMap(g => {
+        if (g.type === 'Polygon') return [g.arcs.map(ring)];
+        if (g.type === 'MultiPolygon') return g.arcs.map(p => p.map(ring));
+        return [];
+      })
+    };
+  }
+  const landGeo = topoLand(topo, topo.objects.land);
+
+  drawBase(features, landGeo);
+  // Save base pixels so highlight redraws can restore it
+  basePixels = ctx.getImageData(0, 0, TEX_W, TEX_H);
+
+  const tex = new THREE.CanvasTexture(offscreen);
+  tex.colorSpace = THREE.SRGBColorSpace;
+
+  // Create globe sphere with canvas texture
+  globeMat = new THREE.MeshStandardMaterial({
+    map:       tex,
+    roughness: 0.78,
+    metalness: 0.05,
+    emissive:  new THREE.Color(0x222838),
+    emissiveIntensity: 0.15,
+  });
+
+  const globeMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(GLOBE_R, 128, 128),
+    globeMat
+  );
+  // No rotation needed: Three.js sphere UV u=0.5 → local+x, D3 equirectangular lon=0 → u=0.5,
+  // and ll2v(0,0) = local+x. All three conventions agree naturally.
+  scene.add(globeMesh);
+
+  // Invisible hit-detection sphere
+  globeSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(GLOBE_R, 64, 64),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+  );
+  scene.add(globeSphere);
+
+  // Subtle dark-gold rim glow — replaces the blue atmosphere
+  const rimMat = new THREE.ShaderMaterial({
+    uniforms: { uCam: { value: camera.position } },
+    vertexShader: `
+      uniform vec3 uCam;
+      varying float vI;
+      void main() {
+        vec3 n = normalize(normalMatrix * normal);
+        vec3 c = normalize(normalMatrix * uCam);
+        vI = pow(max(0.0, 0.80 - dot(n, c)), 4.5);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying float vI;
+      void main() {
+        // warm dark-gold terminator rim — premium, not blue
+        gl_FragColor = vec4(0.30, 0.22, 0.08, vI * 0.60);
+      }
+    `,
+    side: THREE.BackSide,
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+    depthWrite: false,
+  });
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(GLOBE_R * 1.03, 64, 64), rimMat));
+
+  // Hide loader
+  const loader = document.getElementById('loader');
+  loader.classList.add('hidden');
+  setTimeout(() => loader.remove(), 1000);
+  setTimeout(() => document.getElementById('hint')?.classList.add('hidden'), 6000);
+
+
+  // Target country gold markers
+  const markerGeo = new THREE.SphereGeometry(0.05, 8, 8);
+  const markerMat = new THREE.MeshBasicMaterial({ color: 0xf5c46c });
+  const markers = [];
+  for (const data of Object.values(TARGETS)) {
+    const pos = ll2v(data.lat, data.lon, GLOBE_R * 1.006);
+    const m = new THREE.Mesh(markerGeo, markerMat.clone());
+    m.position.copy(pos);
+    scene.add(m);
+    markers.push(m);
+  }
+
+  // ── Flip Clock ──────────────────────────────────────────────────
+  // Each card has one .fc-face element. The flip animation rotates the card
+  // face out (rotateX -90°), we update the text at the invisible midpoint,
+  // then the card rotates back. No duplicate panels — no duplicate display.
+  const DROP_DATE = new Date(dropDateStr).getTime();
+  const fcValues  = { d: null, h: null, m: null, s: null };
+  const fcTimers  = {};
+
+  function flipTo(key, newVal) {
+    if (fcValues[key] === newVal) return;
+    const card = document.getElementById('fc-' + key);
+    const face = card?.querySelector('.fc-face');
+    if (!card || !face) return;
+
+    if (fcTimers[key]) { clearTimeout(fcTimers[key]); fcTimers[key] = null; }
+
+    card.classList.remove('flipping');
+    void card.offsetWidth; // reflow so animation restarts cleanly
+    card.classList.add('flipping');
+
+    // At 40% (160ms) the card is fully edge-on and invisible — safe to swap text
+    fcTimers[key] = setTimeout(() => {
+      face.textContent = newVal;
+      fcValues[key]    = newVal;
+      fcTimers[key]    = null;
+    }, 152);
+  }
+
+  function initFlipClock() {
+    const diff = Math.max(0, DROP_DATE - Date.now());
+    const vals = {
+      d: String(Math.floor(diff / 86400000)).padStart(2, '0'),
+      h: String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0'),
+      m: String(Math.floor((diff % 3600000)  / 60000)).padStart(2, '0'),
+      s: String(Math.floor((diff % 60000)    / 1000)).padStart(2, '0'),
+    };
+    ['d','h','m','s'].forEach(k => {
+      const face = document.querySelector('#fc-' + k + ' .fc-face');
+      if (face) { face.textContent = vals[k]; fcValues[k] = vals[k]; }
+    });
+  }
+
+  function updateFlipClock() {
+    const diff = Math.max(0, DROP_DATE - Date.now());
+    flipTo('d', String(Math.floor(diff / 86400000)).padStart(2, '0'));
+    flipTo('h', String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0'));
+    flipTo('m', String(Math.floor((diff % 3600000)  / 60000)).padStart(2, '0'));
+    flipTo('s', String(Math.floor((diff % 60000)    / 1000)).padStart(2, '0'));
+  }
+
+  initFlipClock();
+  setInterval(updateFlipClock, 1000);
+
+  // Auto-fly to a random country after 4 seconds
+  setTimeout(() => {
+    const keys = Object.keys(TARGETS);
+    flyTo(keys[Math.floor(Math.random() * keys.length)]);
+  }, 4000);
+
+
+  const clock = new THREE.Clock();
+  prevFrameTime = performance.now();
+
+  (function animate() {
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
+
+    // Delta time — capped at 50ms to handle tab focus loss
+    const now  = performance.now();
+    const dt   = Math.min((now - prevFrameTime) / 1000, 0.050);
+    prevFrameTime = now;
+
+    controls.update();
+    rimMat.uniforms.uCam.value.copy(camera.position);
+    if (window.__starMat) window.__starMat.uniforms.uTime.value = t;
+
+    stepPlane(dt);
+
+    // Subtle camera target follow: lerp toward plane during flight, back to origin after
+    const camTargetGoal = planeFlying
+      ? plane.position.clone().normalize().multiplyScalar(GLOBE_R * 0.22)
+      : new THREE.Vector3(0, 0, 0);
+    controls.target.lerp(camTargetGoal, planeFlying ? 0.018 : 0.030);
+
+    renderer.render(scene, camera);
+  })();
+}
+
+init().catch(err => {
+  console.error(err);
+  const s = document.querySelector('#loader span');
+  if (s) s.textContent = 'Error loading — check console';
+});
+</script>
+
+<!-- Email signup form handler — posts to /api/newsletter (Mailchimp) -->
+<script>
+(function() {
+  const form      = document.getElementById('email-bar');
+  const btn       = form.querySelector('button');
+  const lockedIn  = document.getElementById('locked-in');
+  const emailInput = form.querySelector('input');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = emailInput.value.trim();
+    if (!email) return;
+
+    // Disable while submitting
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    try {
+      const body = new FormData();
+      body.set('email', email);
+      body.set('tags', 'TBA SIGN UPS');
+
+      const res = await fetch('/api/newsletter', { method: 'POST', body });
+      const json = await res.json().catch(() => ({}));
+
+      if (json && json.error) {
+        // Already subscribed — treat as success so they see the locked-in state
+        if (json.error.toLowerCase().includes('already subscribed')) {
+          form.classList.add('collapsing');
+          setTimeout(() => {
+            form.style.display = 'none';
+            const li = document.getElementById('locked-in');
+            li.querySelector('span').textContent = "YOU'RE ALREADY LOCKED IN";
+            li.classList.add('show');
+            setTimeout(() => {
+              li.classList.add('hide');
+              setTimeout(() => {
+                li.classList.remove('show', 'hide');
+                li.style.removeProperty('display');
+                li.querySelector('span').textContent = "You're locked in";
+                form.querySelector('input').value = '';
+                btn.textContent = 'LOCK IN';
+                btn.disabled = false;
+                form.classList.remove('collapsing');
+                form.style.display = 'flex';
+                form.classList.add('expanding');
+                setTimeout(() => form.classList.remove('expanding'), 460);
+              }, 520);
+            }, 3000);
+          }, 480);
+          return;
+        }
+        // Other errors — show on button briefly then re-enable
+        btn.textContent = json.error.length < 28 ? json.error.toUpperCase() : 'TRY AGAIN';
+        setTimeout(() => {
+          btn.textContent = 'LOCK IN';
+          btn.disabled = false;
+        }, 2800);
+        return;
+      }
+    } catch (_) {
+      // Network failure — still proceed to the success animation so UX isn't broken
+    }
+
+    // Success: squeeze/collapse the form, then show gif
+    form.classList.add('collapsing');
+    setTimeout(() => {
+      form.style.display = 'none';
+      lockedIn.classList.add('show');
+      setTimeout(() => {
+        lockedIn.classList.add('hide');
+        setTimeout(() => {
+          lockedIn.classList.remove('show', 'hide');
+          lockedIn.style.removeProperty('display');
+          emailInput.value = '';
+          btn.textContent = 'LOCK IN';
+          btn.disabled = false;
+          form.classList.remove('collapsing');
+          form.style.display = 'flex';
+          form.classList.add('expanding');
+          setTimeout(() => form.classList.remove('expanding'), 460);
+        }, 520);
+      }, 3000);
+    }, 480);
+  });
+})();
+</script>
+
+<!-- Compass text overlay: curved arc labels, transition on landing only -->
+<script>
+(function () {
+  'use strict';
+  const canvas = document.getElementById('ring-canvas');
+  const ctx    = canvas.getContext('2d');
+  const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ@#!?/\\|';
+
+  const DEFAULT_PRIMARY = 'IF YOU SAW ME';
+  const DEFAULT_ALT     = 'I WAS NEVER HERE';
+
+  // 4 independent labels — [0] North PRIMARY, [1] South ALT, [2] East PRIMARY, [3] West ALT
+  function makeLabel(text) { return { display: text, target: text, progress: 1 }; }
+  const north = makeLabel(DEFAULT_PRIMARY);
+  const south = makeLabel(DEFAULT_ALT);
+  const east  = makeLabel(DEFAULT_PRIMARY);
+  const west  = makeLabel(DEFAULT_ALT);
+
+  let lastLandedISO = null;
+  let globalAlpha   = 1;
+  let isDragging    = false;
+
+  // Trigger scramble when plane LANDS at a new country
+  function onLand(iso) {
+    const g   = window.__globe;
+    const tgt = (g && g.TARGETS && g.TARGETS[iso]) ? g.TARGETS[iso] : null;
+    const newPrimary = tgt?.saw    || DEFAULT_PRIMARY;
+    const newAlt     = tgt?.phrase || DEFAULT_ALT;
+    for (const s of [north, east]) {
+      if (s.target !== newPrimary) { s.target = newPrimary; s.progress = 0; }
+    }
+    for (const s of [south, west]) {
+      if (s.target !== newAlt) { s.target = newAlt; s.progress = 0; }
+    }
+  }
+
+  (function hookControls() {
+    const g = window.__globe;
+    if (!g || !g.controls) { setTimeout(hookControls, 120); return; }
+    g.controls.addEventListener('start', () => { isDragging = true; });
+    g.controls.addEventListener('end',   () => { isDragging = false; });
+  })();
+
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize, { passive: true });
+
+  function getGlobeScreenR() {
+    const g = window.__globe;
+    if (!g || !g.camera) return canvas.height * 0.42;
+    const cam = g.camera, ctl = g.controls;
+    const tx = ctl?.target.x ?? 0, ty = ctl?.target.y ?? 0, tz = ctl?.target.z ?? 0;
+    const D = Math.sqrt((cam.position.x-tx)**2 + (cam.position.y-ty)**2 + (cam.position.z-tz)**2);
+    const R = g.GLOBE_R;
+    if (D <= R) return canvas.height * 0.42;
+    const focal = (canvas.height / 2) / Math.tan(cam.fov * Math.PI / 360);
+    return focal * R / Math.sqrt(D * D - R * R);
+  }
+
+  function tickScramble(s, dt) {
+    if (s.progress >= 1 && s.display === s.target) return;
+    s.progress = Math.min(1, s.progress + dt * 2.4);
+    const tgt = s.target;
+    let out = '';
+    for (let i = 0; i < tgt.length; i++) {
+      if (tgt[i] === ' ') { out += ' '; continue; }
+      out += s.progress > i / tgt.length
+        ? tgt[i]
+        : GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+    }
+    s.display = out;
+    if (s.progress >= 1) s.display = tgt;
+  }
+
+  /**
+   * Draw text curved along a circular arc of radius `arcR`.
+   *
+   * Placement math (canvas y-axis points DOWN):
+   *   top    — center angle -π/2, traverse left→right (increasing θ), rot = θ + π/2
+   *   bottom — center angle +π/2, traverse right→left (decreasing θ), rot = θ - π/2
+   *   right  — center angle  0,   traverse top→bottom (increasing θ), rot = θ + π/2
+   *   left   — center angle  π,   traverse bottom→top (increasing θ), rot = θ + π/2
+   *
+   * At the center of each placement the rotation simplifies to 0 (upright) for
+   * top/bottom and ±π/2 for left/right — identical to the original straight labels
+   * but now each character tilts slightly to follow the arc.
+   */
+  function drawArcText(text, cx, cy, arcR, placement) {
+    if (!text) return;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    const chars  = [...text];
+    const widths = chars.map(c => ctx.measureText(c).width);
+    const totalW = widths.reduce((a, b) => a + b, 0);
+    const span   = totalW / arcR; // arc angle subtended by the full string
+
+    const PLACES = {
+      top:    { center: -Math.PI / 2, dir:  1, rotFn: a =>  a + Math.PI / 2 },
+      bottom: { center:  Math.PI / 2, dir: -1, rotFn: a =>  a - Math.PI / 2 },
+      right:  { center:  0,           dir:  1, rotFn: a =>  a + Math.PI / 2 },
+      left:   { center:  Math.PI,     dir:  1, rotFn: a =>  a + Math.PI / 2 },
+    };
+    const { center, dir, rotFn } = PLACES[placement];
+    const aStart = center - (span / 2) * dir;
+
+    let cum = 0;
+    chars.forEach((ch, i) => {
+      const cw = widths[i];
+      if (ch === ' ') { cum += cw; return; }
+      const a = aStart + dir * (cum + cw / 2) / arcR;
+      ctx.save();
+      ctx.translate(cx + arcR * Math.cos(a), cy + arcR * Math.sin(a));
+      ctx.rotate(rotFn(a));
+      ctx.fillText(ch, 0, 0);
+      ctx.restore();
+      cum += cw;
+    });
+  }
+
+  let prevTime = 0;
+  function draw(ts) {
+    requestAnimationFrame(draw);
+    const dt = Math.min((ts - prevTime) / 1000, 0.1);
+    prevTime = ts;
+
+    // Detect new landing and trigger scramble
+    const landedISO = window.__landedISO;
+    if (landedISO !== lastLandedISO) {
+      lastLandedISO = landedISO;
+      if (landedISO) onLand(landedISO);
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    globalAlpha += ((isDragging ? 0 : 1) - globalAlpha) * Math.min(1, dt * 5);
+    if (globalAlpha < 0.01) return;
+
+    // Tick all 4 labels independently
+    for (const s of [north, south, east, west]) tickScramble(s, dt);
+
+    const sR   = getGlobeScreenR();
+    const GAP  = 28;
+    const arcR = sR + GAP;
+    const pcx  = canvas.width  / 2;
+    const pcy  = canvas.height / 2;
+    const fs   = Math.max(8, Math.round(Math.min(canvas.width, canvas.height) * 0.012));
+
+    ctx.save();
+    ctx.globalAlpha  = globalAlpha;
+    ctx.font         = `700 ${fs}px 'Orbitron', monospace`;
+    ctx.fillStyle    = 'rgba(255,255,255,0.65)';
+    try { ctx.letterSpacing = '3px'; } catch (_) {}
+
+    drawArcText(north.display, pcx, pcy, arcR, 'top');
+    drawArcText(south.display, pcx, pcy, arcR, 'bottom');
+    drawArcText(east.display,  pcx, pcy, arcR, 'right');
+    drawArcText(west.display,  pcx, pcy, arcR, 'left');
+
+    ctx.restore();
+  }
+
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
