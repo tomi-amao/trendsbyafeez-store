@@ -143,6 +143,14 @@
     animation: barCollapse 0.45s cubic-bezier(0.55, 0, 1, 0.45) forwards;
     pointer-events: none;
   }
+  @keyframes barExpand {
+    0%   { transform: translateX(-50%) scaleX(0)    scaleY(0);   opacity: 0; }
+    50%  { transform: translateX(-50%) scaleX(0.08) scaleY(0.5); opacity: 1; }
+    100% { transform: translateX(-50%) scaleX(1)    scaleY(1);   opacity: 1; }
+  }
+  #email-bar.expanding {
+    animation: barExpand 0.45s cubic-bezier(0, 0.55, 0.45, 1) forwards;
+  }
 
   /* ── Locked-in gif overlay ── */
   #locked-in {
@@ -172,7 +180,7 @@
   }
   #locked-in span {
     font-size: 8px; letter-spacing: 0.30em; font-weight: 700;
-    color: rgba(255,255,255,0.35); font-family: 'Orbitron', system-ui, sans-serif;
+    color: #fff; font-family: 'Orbitron', system-ui, sans-serif;
     text-transform: uppercase;
   }
 </style>
@@ -215,7 +223,7 @@
 
 <div id="locked-in">
   <img src="./locked_in.gif" alt="locked in" />
-  <span>You're on the list</span>
+  <span>You're locked in</span>
 </div>
 
 <canvas id="ring-canvas"></canvas>
@@ -1070,7 +1078,18 @@ init().catch(err => {
             li.classList.add('show');
             setTimeout(() => {
               li.classList.add('hide');
-              setTimeout(() => { li.classList.remove('show', 'hide'); li.style.display = 'none'; }, 520);
+              setTimeout(() => {
+                li.classList.remove('show', 'hide');
+                li.style.display = 'none';
+                li.querySelector('span').textContent = "You're locked in";
+                form.querySelector('input').value = '';
+                btn.textContent = 'LOCK IN';
+                btn.disabled = false;
+                form.classList.remove('collapsing');
+                form.style.display = 'flex';
+                form.classList.add('expanding');
+                setTimeout(() => form.classList.remove('expanding'), 460);
+              }, 520);
             }, 3000);
           }, 480);
           return;
@@ -1094,7 +1113,17 @@ init().catch(err => {
       lockedIn.classList.add('show');
       setTimeout(() => {
         lockedIn.classList.add('hide');
-        setTimeout(() => { lockedIn.classList.remove('show', 'hide'); lockedIn.style.display = 'none'; }, 520);
+        setTimeout(() => {
+          lockedIn.classList.remove('show', 'hide');
+          lockedIn.style.display = 'none';
+          emailInput.value = '';
+          btn.textContent = 'LOCK IN';
+          btn.disabled = false;
+          form.classList.remove('collapsing');
+          form.style.display = 'flex';
+          form.classList.add('expanding');
+          setTimeout(() => form.classList.remove('expanding'), 460);
+        }, 520);
       }, 3000);
     }, 480);
   });
