@@ -154,9 +154,16 @@
     display: flex;
     animation: lockedFadeIn 0.45s 0.1s ease both;
   }
+  #locked-in.hide {
+    animation: lockedFadeOut 0.5s ease forwards;
+  }
   @keyframes lockedFadeIn {
     from { opacity: 0; transform: translateX(-50%) scale(0.75); }
     to   { opacity: 1; transform: translateX(-50%) scale(1); }
+  }
+  @keyframes lockedFadeOut {
+    from { opacity: 1; transform: translateX(-50%) scale(1); }
+    to   { opacity: 0; transform: translateX(-50%) scale(0.85); }
   }
   #locked-in img {
     max-height: 160px; max-width: 260px;
@@ -1043,6 +1050,10 @@ init().catch(err => {
             const li = document.getElementById('locked-in');
             li.querySelector('span').textContent = "YOU'RE ALREADY LOCKED IN";
             li.classList.add('show');
+            setTimeout(() => {
+              li.classList.add('hide');
+              setTimeout(() => { li.classList.remove('show', 'hide'); li.style.display = 'none'; }, 520);
+            }, 3000);
           }, 480);
           return;
         }
@@ -1063,6 +1074,10 @@ init().catch(err => {
     setTimeout(() => {
       form.style.display = 'none';
       lockedIn.classList.add('show');
+      setTimeout(() => {
+        lockedIn.classList.add('hide');
+        setTimeout(() => { lockedIn.classList.remove('show', 'hide'); lockedIn.style.display = 'none'; }, 520);
+      }, 3000);
     }, 480);
   });
 })();
