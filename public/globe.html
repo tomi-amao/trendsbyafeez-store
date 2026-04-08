@@ -772,6 +772,16 @@ window.addEventListener('resize', () => {
    INIT
    ═══════════════════════════════════════════════════════════════ */
 async function init() {
+  // Fetch drop date from environment variable via API
+  let dropDateStr = '2026-04-15T00:00:00';
+  try {
+    const dropDateRes = await fetch('/api/config');
+    const dropDateData = await dropDateRes.json();
+    dropDateStr = dropDateData.dropDate || dropDateStr;
+  } catch (_) {
+    console.warn('Could not fetch drop date, using default');
+  }
+
   // Fetch TopoJSON
   const res  = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
   const topo = await res.json();
@@ -889,7 +899,7 @@ async function init() {
   // Each card has one .fc-face element. The flip animation rotates the card
   // face out (rotateX -90°), we update the text at the invisible midpoint,
   // then the card rotates back. No duplicate panels — no duplicate display.
-  const DROP_DATE = new Date('2026-04-09T00:00:00').getTime();
+  const DROP_DATE = new Date(dropDateStr).getTime();
   const fcValues  = { d: null, h: null, m: null, s: null };
   const fcTimers  = {};
 
