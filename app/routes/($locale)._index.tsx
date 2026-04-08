@@ -35,6 +35,16 @@ export const meta: Route.MetaFunction = () => {
 };
 
 export async function loader(args: Route.LoaderArgs) {
+  // When STORE_OPEN is not set to "true" the store is in coming-soon mode.
+  // Redirect visitors to the globe landing page.
+  const env = (args.context as any).env as Record<string, string | undefined>;
+  if (env?.STORE_OPEN !== 'true') {
+    throw new Response(null, {
+      status: 302,
+      headers: {Location: '/globe.html'},
+    });
+  }
+
   const deferredData = loadDeferredData(args);
   const criticalData = await loadCriticalData(args);
   return {...deferredData, ...criticalData};

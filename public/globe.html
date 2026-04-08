@@ -50,13 +50,6 @@
   #loader span { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.3); }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  #back-link {
-    position: fixed; top: 22px; left: 26px; z-index: 50;
-    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
-    color: rgba(255,255,255,0.28); text-decoration: none; transition: color 0.2s;
-  }
-  #back-link:hover { color: rgba(255,255,255,0.75); }
-
   #hint {
     position: fixed; bottom: 190px; left: 50%; transform: translateX(-50%);
     font-size: 11px; letter-spacing: 0.07em; color: rgba(255,255,255,0.2);
@@ -181,7 +174,6 @@
 
 <div id="loader"><div id="loader-ring"></div><span>Loading globe…</span></div>
 <div id="tooltip"><div class="country-name"></div><div class="phrase"></div></div>
-<a id="back-link" href="/">← TrendsByAfeez</a>
 <div id="hint">Click a highlighted country to fly there</div>
 
 <div id="countdown">
@@ -210,7 +202,7 @@
 </div>
 
 <form id="email-bar" autocomplete="off">
-  <input type="email" id="email-input" placeholder="Enter your email for early access" required />
+  <input type="email" id="email-input" placeholder="Enter your email" required />
   <button type="submit">LOCK IN</button>
 </form>
 
@@ -897,7 +889,7 @@ async function init() {
   // Each card has one .fc-face element. The flip animation rotates the card
   // face out (rotateX -90°), we update the text at the invisible midpoint,
   // then the card rotates back. No duplicate panels — no duplicate display.
-  const DROP_DATE = new Date('2026-03-29T00:00:00').getTime();
+  const DROP_DATE = new Date('2026-04-09T00:00:00').getTime();
   const fcValues  = { d: null, h: null, m: null, s: null };
   const fcTimers  = {};
 
@@ -988,19 +980,46 @@ init().catch(err => {
 });
 </script>
 
-<!-- Email signup form handler -->
+<!-- Email signup form handler — posts to /api/newsletter (Mailchimp) -->
 <script>
 (function() {
   const form      = document.getElementById('email-bar');
+  const btn       = form.querySelector('button');
   const lockedIn  = document.getElementById('locked-in');
-  form.addEventListener('submit', (e) => {
+
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = form.querySelector('input').value.trim();
+    const emailInput = form.querySelector('input');
+    const email = emailInput.value.trim();
     if (!email) return;
-    // TODO: wire to your mailing list API
-    // Step 1: squeeze/collapse the form
+
+    // Disable while submitting
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    try {
+      const body = new FormData();
+      body.set('email', email);
+      body.set('tags', 'TBA SIGN UPS');
+
+      const res = await fetch('/api/newsletter', { method: 'POST', body });
+      const json = await res.json().catch(() => ({}));
+
+      if (json && json.error) {
+        // Show inline error briefly, then re-enable
+        btn.textContent = json.error.length < 28 ? json.error.toUpperCase() : 'TRY AGAIN';
+        setTimeout(() => {
+          btn.textContent = 'LOCK IN';
+          btn.disabled = false;
+        }, 2800);
+        return;
+      }
+    } catch (_) {
+      // Network failure — still proceed to the success animation so UX isn't broken
+    }
+
+    // Success: squeeze/collapse the form, then show gif
     form.classList.add('collapsing');
-    // Step 2: after animation ends, hide form and show gif
     setTimeout(() => {
       form.style.display = 'none';
       lockedIn.classList.add('show');
