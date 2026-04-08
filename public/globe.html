@@ -1031,25 +1031,6 @@ init().catch(err => {
   const lockedIn  = document.getElementById('locked-in');
   const emailInput = form.querySelector('input');
 
-  // Lock globe controls while the user is typing
-  function getControls() { return window.__globe && window.__globe.controls; }
-
-  emailInput.addEventListener('focus', () => {
-    const ctl = getControls();
-    if (!ctl) return;
-    ctl.enableRotate = false;
-    ctl.enableZoom   = false;
-    ctl.autoRotate   = false;
-  });
-
-  emailInput.addEventListener('blur', () => {
-    const ctl = getControls();
-    if (!ctl) return;
-    ctl.enableRotate = true;
-    ctl.enableZoom   = true;
-    ctl.autoRotate   = true;
-  });
-
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = emailInput.value.trim();
