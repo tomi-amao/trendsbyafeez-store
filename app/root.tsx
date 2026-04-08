@@ -71,13 +71,19 @@ export function links() {
 }
 
 export async function loader(args: Route.LoaderArgs) {
+  // When STORE_OPEN is not "true", redirect every page to the globe landing page.
+  // API routes (e.g. /api/*) are excluded so newsletter/config endpoints stay reachable.
+  const {storefront, env} = args.context;
+  const url = new URL(args.request.url);
+  if ((env as any)?.STORE_OPEN !== 'true' && !url.pathname.startsWith('/api/')) {
+    throw new Response(null, {status: 302, headers: {Location: '/globe.html'}});
+  }
+
   // Start fetching non-critical data without blocking time to first byte
   const deferredData = loadDeferredData(args);
 
   // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
-
-  const {storefront, env} = args.context;
 
   return {
     ...deferredData,
