@@ -75,13 +75,13 @@
   }
   .cd-timer { display: flex; align-items: flex-end; justify-content: center; gap: 4px; }
   .cd-sep {
-    font-size: 24px; font-weight: 200; color: rgba(255,255,255,0.15); line-height: 1;
+    font-size: 24px; font-weight: 200; color: rgba(255,255,255,0.88); line-height: 1;
     padding-bottom: 13px; font-family: 'Inter', system-ui, sans-serif;
   }
   .flip-unit { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .flip-unit small {
     font-size: 7px; letter-spacing: 0.14em; font-weight: 400;
-    color: rgba(255,255,255,0.13); font-family: 'Inter', system-ui, sans-serif;
+    color: rgba(255,255,255,0.88); font-family: 'Inter', system-ui, sans-serif;
     text-transform: uppercase;
   }
   .flip-card { width: 50px; height: 58px; perspective: 400px; }
@@ -190,17 +190,17 @@
       <div class="flip-card" id="fc-d"><div class="fc-face">--</div></div>
       <small>Days</small>
     </div>
-    <span class="cd-sep">:</span>
+    <!-- <span class="cd-sep">:</span> -->
     <div class="flip-unit">
       <div class="flip-card" id="fc-h"><div class="fc-face">--</div></div>
       <small>Hrs</small>
     </div>
-    <span class="cd-sep">:</span>
+    <!-- <span class="cd-sep">:</span> -->
     <div class="flip-unit">
       <div class="flip-card" id="fc-m"><div class="fc-face">--</div></div>
       <small>Min</small>
     </div>
-    <span class="cd-sep">:</span>
+    <!-- <span class="cd-sep">:</span> -->
     <div class="flip-unit">
       <div class="flip-card" id="fc-s"><div class="fc-face">--</div></div>
       <small>Sec</small>
@@ -757,6 +757,8 @@ function checkHover(cx, cy) {
 }
 
 window.addEventListener('pointermove', (e) => {
+  // Skip on touch — hover doesn't exist on touch devices
+  if (e.pointerType === 'touch') return;
   const found = checkHover(e.clientX, e.clientY);
   if (found !== hoveredISO) {
     hoveredISO = found;
@@ -767,7 +769,23 @@ window.addEventListener('pointermove', (e) => {
   else       { hideTooltip(); document.body.style.cursor = ''; }
 }, { passive: true });
 
-window.addEventListener('click', () => { if (hoveredISO) flyTo(hoveredISO); });
+// Track pointer-down position to distinguish tap from drag
+let pointerDownX = 0, pointerDownY = 0;
+window.addEventListener('pointerdown', (e) => {
+  pointerDownX = e.clientX;
+  pointerDownY = e.clientY;
+}, { passive: true });
+
+window.addEventListener('click', (e) => {
+  // On touch, re-raycast at the tap position (hoveredISO won't be set from pointermove)
+  const dx = e.clientX - pointerDownX;
+  const dy = e.clientY - pointerDownY;
+  const isTap = Math.sqrt(dx * dx + dy * dy) < 10;
+  if (!isTap) return;
+
+  const iso = checkHover(e.clientX, e.clientY) || hoveredISO;
+  if (iso) flyTo(iso);
+});
 
 window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
