@@ -70,7 +70,7 @@
   }
   .cd-label {
     font-size: 8px; letter-spacing: 0.30em; font-weight: 400;
-    color: rgba(255,255,255,0.18); margin-bottom: 10px;
+    color: rgba(255,255,255,0.88); margin-bottom: 10px;
     font-family: 'Inter', system-ui, sans-serif; text-transform: uppercase;
   }
   .cd-timer { display: flex; align-items: flex-end; justify-content: center; gap: 4px; }
@@ -996,10 +996,29 @@ init().catch(err => {
   const form      = document.getElementById('email-bar');
   const btn       = form.querySelector('button');
   const lockedIn  = document.getElementById('locked-in');
+  const emailInput = form.querySelector('input');
+
+  // Lock globe controls while the user is typing
+  function getControls() { return window.__globe && window.__globe.controls; }
+
+  emailInput.addEventListener('focus', () => {
+    const ctl = getControls();
+    if (!ctl) return;
+    ctl.enableRotate = false;
+    ctl.enableZoom   = false;
+    ctl.autoRotate   = false;
+  });
+
+  emailInput.addEventListener('blur', () => {
+    const ctl = getControls();
+    if (!ctl) return;
+    ctl.enableRotate = true;
+    ctl.enableZoom   = true;
+    ctl.autoRotate   = true;
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const emailInput = form.querySelector('input');
     const email = emailInput.value.trim();
     if (!email) return;
 
@@ -1016,7 +1035,18 @@ init().catch(err => {
       const json = await res.json().catch(() => ({}));
 
       if (json && json.error) {
-        // Show inline error briefly, then re-enable
+        // Already subscribed — treat as success so they see the locked-in state
+        if (json.error.toLowerCase().includes('already subscribed')) {
+          form.classList.add('collapsing');
+          setTimeout(() => {
+            form.style.display = 'none';
+            const li = document.getElementById('locked-in');
+            li.querySelector('span').textContent = "YOU'RE ALREADY LOCKED IN";
+            li.classList.add('show');
+          }, 480);
+          return;
+        }
+        // Other errors — show on button briefly then re-enable
         btn.textContent = json.error.length < 28 ? json.error.toUpperCase() : 'TRY AGAIN';
         setTimeout(() => {
           btn.textContent = 'LOCK IN';
