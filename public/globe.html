@@ -1080,7 +1080,7 @@ init().catch(err => {
               li.classList.add('hide');
               setTimeout(() => {
                 li.classList.remove('show', 'hide');
-                li.style.display = 'none';
+                li.style.removeProperty('display');
                 li.querySelector('span').textContent = "You're locked in";
                 form.querySelector('input').value = '';
                 btn.textContent = 'LOCK IN';
@@ -1115,7 +1115,7 @@ init().catch(err => {
         lockedIn.classList.add('hide');
         setTimeout(() => {
           lockedIn.classList.remove('show', 'hide');
-          lockedIn.style.display = 'none';
+          lockedIn.style.removeProperty('display');
           emailInput.value = '';
           btn.textContent = 'LOCK IN';
           btn.disabled = false;
