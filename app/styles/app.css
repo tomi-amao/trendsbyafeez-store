@@ -166,7 +166,19 @@ a {
 .header--transparent {
   background: transparent;
   color: #504f56;
-  
+}
+
+@media (max-width: 767px) {
+  .header--transparent {
+    color: var(--color-light);
+  }
+  .header--transparent .header__typeface {
+    filter: brightness(0) invert(1);
+  }
+  .header--transparent .header__cart-count {
+    background: var(--color-light);
+    color: var(--color-dark);
+  }
 }
 
 .header--solid {
@@ -473,7 +485,7 @@ button.reset {
   width: 100% !important;
   height: 100% !important;
   object-fit: cover;
-  object-position: center;
+  object-position: center top;
   max-width: none !important;
   aspect-ratio: unset !important;
 }
@@ -626,8 +638,10 @@ button.reset {
   width: 32px;
 }
 
-.hero__cta--ghost {
-  /* Ghost variant inherits the same style — just in case it's used */
+@media (max-width: 767px) {
+  .hero__cta {
+    color: var(--color-light);
+  }
 }
 
 @keyframes hero-stagger {
@@ -5604,6 +5618,147 @@ body:has(.gallery-page) > main {
 .shopify-policy__body li { margin-bottom: 0.5rem; }
 .shopify-policy__body a { text-decoration: underline; text-underline-offset: 3px; }
 .shopify-policy__body a:hover { opacity: 0.55; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   GENERIC PAGE (.page)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: calc(var(--header-height) + var(--announcement-height) + 3rem) 2rem 5rem;
+}
+
+.page header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.page h1 {
+  font-size: clamp(1.25rem, 4vw, 2.25rem);
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.page main {
+  font-size: 0.84rem;
+  line-height: 1.8;
+  color: var(--color-muted);
+}
+
+.page main p { margin: 0 0 1rem; }
+.page main h2,
+.page main h3,
+.page main h4 {
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-dark);
+  margin: 1.75rem 0 0.5rem;
+}
+.page main ul,
+.page main ol { padding-left: 1.5rem; margin: 0 0 1rem; }
+.page main li { margin-bottom: 0.4rem; }
+.page main a { text-decoration: underline; text-underline-offset: 3px; }
+.page main a:hover { opacity: 0.6; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ABOUT PAGE
+   ═══════════════════════════════════════════════════════════════════ */
+
+.page-about {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: clamp(2rem, 8vw, 6rem) clamp(1rem, 5vw, 3rem);
+  background: var(--color-light);
+  color: var(--color-dark);
+  position: relative;
+  overflow: hidden;
+}
+
+.page-about__bg-glyph {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(8vw, 14vw, 180px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.04);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.page-about__eyebrow {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 0 0 1.25rem;
+}
+
+.page-about__title {
+  font-size: clamp(1.5rem, 5vw, 3.5rem);
+  font-weight: 100;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0 0 1.25rem;
+  line-height: 1.1;
+}
+
+.page-about__body {
+  font-size: 0.82rem;
+  line-height: 1.9;
+  color: var(--color-muted);
+  max-width: 480px;
+  margin: 0 0 2.5rem;
+}
+
+.page-about__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.page-about__link {
+  display: inline-block;
+  padding: 0.85rem 2.2rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1px solid var(--color-dark);
+  background: var(--color-dark);
+  color: var(--color-light);
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.page-about__link:hover {
+  background: transparent;
+  color: var(--color-dark);
+}
+
+.page-about__link--ghost {
+  background: transparent;
+  color: var(--color-dark);
+}
+
+.page-about__link--ghost:hover {
+  background: var(--color-dark);
+  color: var(--color-light);
+}
 
 /* ═══════════════════════════════════════════════════════════════════
    404 PAGE

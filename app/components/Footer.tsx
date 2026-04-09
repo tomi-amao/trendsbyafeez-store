@@ -100,11 +100,6 @@ export function Footer({
                       New Arrivals
                     </NavLink>
                   </li>
-                  <li>
-                    <NavLink prefetch="intent" to="/search">
-                      Search
-                    </NavLink>
-                  </li>
                 </ul>
               </div>
               <div className="footer__col">
@@ -126,11 +121,6 @@ export function Footer({
                   <li>
                     <NavLink prefetch="intent" to="/pages/contact">
                       Contact
-                    </NavLink>
-                  </li>
-                  <li>
-                    <NavLink prefetch="intent" to="/account">
-                      Account
                     </NavLink>
                   </li>
                 </ul>
@@ -156,6 +146,11 @@ export function Footer({
                   <li>
                     <NavLink prefetch="intent" to="/policies/refund-policy">
                       Refund Policy
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink prefetch="intent" to="/policies/shipping-policy">
+                      Shipping Policy
                     </NavLink>
                   </li>
                 </ul>
