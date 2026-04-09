@@ -81,6 +81,20 @@ export async function action({request, context}: ActionFunctionArgs) {
       return data({success: true});
     }
 
+    // Guard against Mailchimp returning an HTML error page (e.g. 502/503)
+    // instead of JSON — response.json() would throw a SyntaxError.
+    // Also accept application/problem+json (RFC 7807) which Mailchimp uses for 400s.
+    const contentType = response.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json') && !contentType.includes('application/problem+json')) {
+      console.error(
+        `[newsletter] Mailchimp returned non-JSON response (HTTP ${response.status}, Content-Type: ${contentType})`,
+      );
+      return data(
+        {success: false, error: 'Something went wrong. Please try again.'},
+        {status: 500},
+      );
+    }
+
     const result = (await response.json()) as {title?: string; detail?: string};
 
     if (result.title === 'Member Exists') {

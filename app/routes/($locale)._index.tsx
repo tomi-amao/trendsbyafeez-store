@@ -269,7 +269,7 @@ function HeroSection({
           <img
             src={(mobile as Extract<AdminHeroMedia, {type: 'image'}>).url}
             className="hero__image"
-            style={{objectPosition: desktopPosition ?? mobilePosition ?? 'center'}}
+            style={{objectPosition: desktopPosition ?? mobilePosition ?? 'center top'}}
             alt={desktop.altText ?? fallbackImage?.altText ?? collection.title}
             loading="eager"
             decoding="async"

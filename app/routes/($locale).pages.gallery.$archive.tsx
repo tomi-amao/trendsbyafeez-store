@@ -9,7 +9,7 @@
  */
 import type {Route} from './+types/pages.gallery.$archive';
 import React, {useState, useCallback, useEffect, useRef} from 'react';
-import {useLoaderData, Link} from 'react-router';
+import {useLoaderData, Link, redirect} from 'react-router';
 import {getAdminAccessToken, fetchAdminFiles} from '~/utils/shopify-admin.server';
 
 export const meta: Route.MetaFunction = ({data}: {data: Awaited<ReturnType<typeof loader>> | undefined}) => [
@@ -64,6 +64,8 @@ function groupByName(images: GalleryImage[]): ShootGroup[] {
 
 /* ─── Loader ─────────────────────────────────────────────────────── */
 export async function loader({context, params}: Route.LoaderArgs) {
+  throw redirect('/');
+
   const archiveSlug = (params.archive ?? '').toLowerCase();
   const config = ARCHIVE_CONFIG[archiveSlug];
   const env = (context as any).env as Record<string, string | undefined>;

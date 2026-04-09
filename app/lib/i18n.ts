@@ -11,7 +11,7 @@ export function getLocaleFromRequest(request: Request): I18nLocale {
   type I18nFromUrl = [I18nLocale['language'], I18nLocale['country']];
 
   let pathPrefix = '';
-  let [language, country]: I18nFromUrl = ['EN', 'US'];
+  let [language, country]: I18nFromUrl = ['EN', 'GB'];
 
   if (/^[A-Z]{2}-[A-Z]{2}$/i.test(firstPathPart)) {
     pathPrefix = '/' + firstPathPart;
