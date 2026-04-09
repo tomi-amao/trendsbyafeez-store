@@ -91,8 +91,11 @@ export async function action({request, context}: ActionFunctionArgs) {
     }
 
     console.error('[newsletter] Mailchimp API error:', result);
+    // Surface Mailchimp's own detail message so the user knows exactly what went wrong
+    // (e.g. "looks fake or invalid", "Please provide a valid email address.")
+    const userMessage = result.detail ?? 'Something went wrong. Please try again.';
     return data(
-      {success: false, error: 'Something went wrong. Please try again.'},
+      {success: false, error: userMessage},
       {status: 500},
     );
   } catch (err) {

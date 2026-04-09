@@ -152,6 +152,25 @@
     animation: barExpand 0.45s cubic-bezier(0, 0.55, 0.45, 1) forwards;
   }
 
+  /* ── Email error hint ── */
+  #email-error {
+    position: fixed; bottom: 78px; left: 50%; transform: translateX(-50%);
+    z-index: 50;
+    background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,80,80,0.35);
+    border-radius: 20px;
+    padding: 7px 18px;
+    font-size: 12px; font-weight: 400; letter-spacing: 0.03em;
+    color: #ff9090;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  #email-error.visible { opacity: 1; }
+
   /* ── Locked-in gif overlay ── */
   #locked-in {
     position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
@@ -220,6 +239,7 @@
   <input type="email" id="email-input" placeholder="Enter your email" required />
   <button type="submit">LOCK IN</button>
 </form>
+<div id="email-error"></div>
 
 <div id="locked-in">
   <img src="./locked_in.gif" alt="locked in" />
@@ -1026,10 +1046,19 @@ init().catch(err => {
 <!-- Email signup form handler — posts to /api/newsletter (Mailchimp) -->
 <script>
 (function() {
-  const form      = document.getElementById('email-bar');
-  const btn       = form.querySelector('button');
-  const lockedIn  = document.getElementById('locked-in');
+  const form       = document.getElementById('email-bar');
+  const btn        = form.querySelector('button');
+  const lockedIn   = document.getElementById('locked-in');
   const emailInput = form.querySelector('input');
+  const errorHint  = document.getElementById('email-error');
+  let errorTimer   = null;
+
+  function showError(msg) {
+    clearTimeout(errorTimer);
+    errorHint.textContent = msg;
+    errorHint.classList.add('visible');
+    errorTimer = setTimeout(() => errorHint.classList.remove('visible'), 4000);
+  }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1075,8 +1104,9 @@ init().catch(err => {
           }, 480);
           return;
         }
-        // Other errors — show on button briefly then re-enable
-        btn.textContent = json.error.length < 28 ? json.error.toUpperCase() : 'TRY AGAIN';
+        // Other errors — show full Mailchimp message in the hint, reset button
+        showError(json.error);
+        btn.textContent = 'TRY AGAIN';
         setTimeout(() => {
           btn.textContent = 'LOCK IN';
           btn.disabled = false;
