@@ -184,14 +184,15 @@ export async function fetchAdminHeroMedia(
 ): Promise<AdminHeroMedia | null> {
   const apiUrl = `https://${storeDomain}/admin/api/2024-04/graphql.json`;
 
-  const res = await fetch(apiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Shopify-Access-Token': accessToken,
-    },
-    body: JSON.stringify({
-      query: `
+  const doFetch = () =>
+    fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': accessToken,
+      },
+      body: JSON.stringify({
+        query: `
         query AdminHeroMedia($query: String) {
           files(first: 1, query: $query) {
             edges {
@@ -211,9 +212,17 @@ export async function fetchAdminHeroMedia(
           }
         }
       `,
-      variables: {query: `filename:${filename}`},
-    }),
-  });
+        variables: {query: `filename:${filename}`},
+      }),
+    });
+
+  let res = await doFetch();
+
+  // Retry once on transient upstream errors (502, 503, 504)
+  if (res.status === 502 || res.status === 503 || res.status === 504) {
+    console.warn(`[ShopifyAdmin] Hero media fetch got HTTP ${res.status} — retrying once…`);
+    res = await doFetch();
+  }
 
   if (!res.ok) {
     console.error(`[ShopifyAdmin] Hero media fetch failed (HTTP ${res.status})`);

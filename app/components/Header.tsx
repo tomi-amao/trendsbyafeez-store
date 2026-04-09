@@ -149,7 +149,7 @@ function AnnouncementBar() {
   const times = useTimezoneClocks();
 
   const items = TIMEZONES.map(([label], i) => (
-    <span className="announcement-bar__item" key={label} > I WAS AT
+    <span className="announcement-bar__item" key={label} > I WAS IN
       <span className="announcement-bar__globe" aria-hidden="true">
         <DotLottieReact
           src="https://lottie.host/27cabdbf-b17b-424c-8b45-8ff884f5bf38/YVx4SYzltC.lottie"

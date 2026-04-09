@@ -67,11 +67,13 @@ export function CartLineItem({
           </div>
 
           <div className="cart-line__options">
-            {selectedOptions.map((option) => (
-              <span key={option.name} className="cart-line__option">
-                {option.value}
-              </span>
-            ))}
+            {selectedOptions
+              .filter((option) => option.value !== 'Default Title')
+              .map((option) => (
+                <span key={option.name} className="cart-line__option">
+                  {option.value}
+                </span>
+              ))}
           </div>
 
           <div className="cart-line__bottom">
