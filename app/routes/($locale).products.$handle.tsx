@@ -1,6 +1,6 @@
 import {redirect, useLoaderData, Await, Link} from 'react-router';
 import type {Route} from './+types/products.$handle';
-import {Suspense, useState, useRef, useCallback} from 'react';
+import {Suspense, useState, useRef, useCallback, useEffect} from 'react';
 import {
   getSelectedProductOptions,
   Analytics,
@@ -88,11 +88,20 @@ export default function Product() {
   const images = product.images?.nodes || [];
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const snapRef = useRef<HTMLDivElement>(null);
+  const thumbsRef = useRef<HTMLDivElement>(null);
 
   const scrollToImage = useCallback((idx: number) => {
     setSelectedImageIndex(idx);
     snapRef.current?.scrollTo({left: idx * (snapRef.current.clientWidth || 0), behavior: 'smooth'});
   }, []);
+
+  // Keep active thumb scrolled into view
+  useEffect(() => {
+    const container = thumbsRef.current;
+    if (!container) return;
+    const activeThumb = container.children[selectedImageIndex] as HTMLElement | undefined;
+    activeThumb?.scrollIntoView({inline: 'nearest', block: 'nearest', behavior: 'smooth'});
+  }, [selectedImageIndex]);
 
   const handleSnapScroll = useCallback(() => {
     const el = snapRef.current;
@@ -132,7 +141,7 @@ export default function Product() {
 
           {/* Mobile: thumbnail strip — synced with snap gallery */}
           {images.length > 1 && (
-            <div className="product-gallery__thumbs">
+            <div className="product-gallery__thumbs" ref={thumbsRef}>
               {images.map((img, idx) => (
                 <button
                   key={img.id || idx}
