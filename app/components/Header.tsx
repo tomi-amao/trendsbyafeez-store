@@ -241,6 +241,7 @@ function DesktopNav({
                 {item.items!.map((sub) => {
                   if (!sub.url) return null;
                   const subUrl = resolveUrl(sub.url);
+                  if (subUrl.includes('/gallery')) return null;
                   return (
                     <NavLink
                       key={sub.id}
@@ -257,6 +258,10 @@ function DesktopNav({
               </div>
             </div>
           );
+        }
+
+        if (url === '/pages/gallery') {
+          return null;
         }
 
         return (
@@ -386,6 +391,7 @@ export function HeaderMenu({
                     {item.items!.map((sub) => {
                       if (!sub.url) return null;
                       const subUrl = resolveUrl(sub.url);
+                      if (subUrl.includes('/gallery')) return null;
                       return (
                         <NavLink
                           key={sub.id}
@@ -402,6 +408,10 @@ export function HeaderMenu({
                 )}
               </div>
             );
+          }
+
+          if (url === '/pages/gallery') {
+            return null;
           }
 
           return (

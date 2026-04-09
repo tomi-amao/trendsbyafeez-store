@@ -6,7 +6,7 @@
  */
 import type {Route} from './+types/pages.gallery._index';
 import {useEffect, useRef} from 'react';
-import {useLoaderData, Link} from 'react-router';
+import {useLoaderData, Link, redirect} from 'react-router';
 import {getAdminAccessToken, fetchAdminFiles, fetchAdminVideoByFilename} from '~/utils/shopify-admin.server';
 
 export const meta: Route.MetaFunction = () => [
@@ -31,6 +31,8 @@ interface Archive {
 
 /* ─── Loader ─────────────────────────────────────────────────────── */
 export async function loader({context}: Route.LoaderArgs) {
+  throw redirect('/');
+
   const env = (context as any).env as Record<string, string | undefined>;
   const clientId = env?.SHOPIFY_CLIENT_ID;
   const clientSecret = env?.SHOPIFY_CLIENT_SECRET;
