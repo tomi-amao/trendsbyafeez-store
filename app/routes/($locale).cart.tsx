@@ -5,7 +5,7 @@ import {Analytics, CartForm} from '@shopify/hydrogen';
 import {CartMain} from '~/components/CartMain';
 
 export const meta: Route.MetaFunction = () => {
-  return [{title: `TrendsByAfeez | Cart`}];
+  return [{title: `TRENDSBYAFEEZ | Cart`}];
 };
 
 export const headers: HeadersFunction = ({actionHeaders}) => actionHeaders;

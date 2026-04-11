@@ -10,10 +10,10 @@ import type {Route} from './+types/pages.contact';
 import {Form, useActionData, useNavigation} from 'react-router';
 
 export const meta: Route.MetaFunction = () => [
-  {title: 'TrendsByAfeez | Contact'},
+  {title: 'TRENDSBYAFEEZ | Contact'},
   {
     name: 'description',
-    content: 'Get in touch with TrendsByAfeez — we\'d love to hear from you.',
+    content: 'Get in touch with TRENDSBYAFEEZ — we\'d love to hear from you.',
   },
 ];
 

@@ -31,7 +31,7 @@ const HERO_DESKTOP: {filename: string; position?: string} | null = { filename: '
 const HERO_MOBILE:  {filename: string; position?: string} | null = { filename: 'GDDUP' };
 
 export const meta: Route.MetaFunction = () => {
-  return [{title: 'TrendsByAfeez | Home'}];
+  return [{title: 'TRENDSBYAFEEZ | Home'}];
 };
 
 export async function loader(args: Route.LoaderArgs) {
@@ -500,7 +500,7 @@ function SplitSection({
               img ? (
                 <img
                   src={img.url}
-                  alt={img.altText || 'TrendsByAfeez'}
+                  alt={img.altText || 'TRENDSBYAFEEZ'}
                   width={img.width ?? undefined}
                   height={img.height ?? undefined}
                   loading="lazy"

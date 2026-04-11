@@ -8,10 +8,10 @@ import type {Route} from './+types/pages.cookie-policy';
 import {Link} from 'react-router';
 
 export const meta: Route.MetaFunction = () => [
-  {title: 'TrendsByAfeez | Cookie Policy'},
+  {title: 'TRENDSBYAFEEZ | Cookie Policy'},
   {
     name: 'description',
-    content: 'Learn how TrendsByAfeez uses cookies and similar technologies on our website.',
+    content: 'Learn how TRENDSBYAFEEZ uses cookies and similar technologies on our website.',
   },
 ];
 
@@ -36,7 +36,7 @@ export default function CookiePolicyPage() {
 
         <h2>How We Use Cookies</h2>
         <p>
-          TrendsByAfeez uses cookies and similar technologies to operate our store, improve
+          TRENDSBYAFEEZ uses cookies and similar technologies to operate our store, improve
           your experience, and understand site performance. We categorise these as follows:
         </p>
 

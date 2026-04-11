@@ -7,7 +7,7 @@ import type {CollectionItemFragment} from 'storefrontapi.generated';
 import {useState, useCallback} from 'react';
 
 export const meta: Route.MetaFunction = () => {
-  return [{title: `TrendsByAfeez | All Products`}];
+  return [{title: `TRENDSBYAFEEZ | All Products`}];
 };
 
 export async function loader(args: Route.LoaderArgs) {

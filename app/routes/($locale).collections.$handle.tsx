@@ -50,7 +50,7 @@ function EditorialTile({image, editorialIndex, link}: {image: EditorialImage; ed
 }
 
 export const meta: Route.MetaFunction = ({data}) => {
-  return [{title: `TrendsByAfeez | ${data?.collection.title ?? ''} Collection`}];
+  return [{title: `TRENDSBYAFEEZ | ${data?.collection.title ?? ''} Collection`}];
 };
 
 export async function loader(args: Route.LoaderArgs) {
