@@ -2171,6 +2171,23 @@ html[data-header-state="hidden"] .collection-controls {
   content: '/ ';
 }
 
+.cart-line__attributes {
+  margin-top: 0.35rem;
+}
+
+.cart-line__attribute {
+  margin: 0;
+  font-size: 0.68rem;
+  color: var(--color-muted);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+.cart-line__attribute-key {
+  font-weight: 600;
+  color: var(--color-dark);
+}
+
 .cart-line__bottom {
   display: flex;
   align-items: center;

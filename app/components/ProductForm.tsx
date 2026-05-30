@@ -109,6 +109,10 @@ export function ProductForm({
   const estimatedShipText = formatEstimatedShipText(
     preorderConfig?.estimatedShipText,
   );
+  const lineAttributes =
+    isPreorder && estimatedShipText
+      ? [{key: 'Estimated ship date', value: estimatedShipText}]
+      : undefined;
 
   return (
     <div className="product-form">
@@ -236,6 +240,7 @@ export function ProductForm({
                 {
                   merchandiseId: selectedVariant.id,
                   quantity: 1,
+                  ...(lineAttributes ? {attributes: lineAttributes} : {}),
                   ...(isPreorder && preorderConfig?.sellingPlanId
                     ? {sellingPlanId: preorderConfig.sellingPlanId}
                     : {}),
