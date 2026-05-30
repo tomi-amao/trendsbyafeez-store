@@ -10,7 +10,7 @@ import {useLoaderData, Link, redirect} from 'react-router';
 import {getAdminAccessToken, fetchAdminFiles, fetchAdminVideoByFilename} from '~/utils/shopify-admin.server';
 
 export const meta: Route.MetaFunction = () => [
-  {title: 'TrendsByAfeez | Gallery'},
+  {title: 'TRENDSBYAFEEZ | Gallery'},
   {name: 'description', content: 'Behind the lens — explore our editorial archives.'},
 ];
 

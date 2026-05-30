@@ -19,7 +19,7 @@ import type {RecommendedProductsQuery} from 'storefrontapi.generated';
 
 export const meta: Route.MetaFunction = ({data}) => {
   return [
-    {title: `TrendsByAfeez | ${data?.product.title ?? ''}`},
+    {title: `TRENDSBYAFEEZ | ${data?.product.title ?? ''}`},
     {rel: 'canonical', href: `/products/${data?.product.handle}`},
   ];
 };

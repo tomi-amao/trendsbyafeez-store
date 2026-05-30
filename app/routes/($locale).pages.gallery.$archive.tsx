@@ -13,7 +13,7 @@ import {useLoaderData, Link, redirect} from 'react-router';
 import {getAdminAccessToken, fetchAdminFiles} from '~/utils/shopify-admin.server';
 
 export const meta: Route.MetaFunction = ({data}: {data: Awaited<ReturnType<typeof loader>> | undefined}) => [
-  {title: `TrendsByAfeez | Gallery — ${data?.archiveName ?? ''}`},
+  {title: `TRENDSBYAFEEZ | Gallery — ${data?.archiveName ?? ''}`},
   {name: 'description', content: `Editorial photographs from the ${data?.archiveName ?? ''} archive.`},
 ];
 
