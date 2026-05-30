@@ -76,18 +76,32 @@ function isComingSoon(product: ProductCardProduct): boolean {
   return p.tags?.some((t) => t.toUpperCase() === 'COMING_SOON') ?? false;
 }
 
+function isPreorder(product: ProductCardProduct): boolean {
+  const p = product as ProductWithExtras;
+  return (
+    p.tags?.some((tag) => {
+      const normalized = tag.trim().toUpperCase().replace(/[\s_-]+/g, '');
+      return normalized.includes('PREORDER');
+    }) ?? false
+  );
+}
+
 export function ProductItem({
   product,
   loading,
+  showCollectionPreorderBadge = false,
 }: {
   product: ProductCardProduct;
   loading?: 'eager' | 'lazy';
+  showCollectionPreorderBadge?: boolean;
 }) {
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const variantUrl = useVariantUrl(product.handle);
   const image = product.featuredImage;
   const available = getAvailability(product);
   const comingSoon = isComingSoon(product);
+  const preorder = isPreorder(product);
+  const showPreorderBadge = showCollectionPreorderBadge && available && !comingSoon && preorder;
   const inventory = getTotalInventory(product);
   const isLowStock = inventory !== null && inventory > 0 && inventory <= LOW_STOCK_THRESHOLD;
   const secondImage = getSecondImage(product);
@@ -140,9 +154,18 @@ export function ProductItem({
                   sizes="(min-width: 768px) 25vw, 50vw"
                 />
               )}
-              {!available && (
-                <div className={`product-card__sold-out-badge${comingSoon ? ' product-card__sold-out-badge--coming-soon' : ''}`} aria-label={comingSoon ? 'Coming soon' : 'Sold out'}>
-                  <span>{comingSoon ? 'Coming Soon' : 'Sold Out'}</span>
+              {(!available || showPreorderBadge) && (
+                <div
+                  className={`product-card__sold-out-badge${comingSoon ? ' product-card__sold-out-badge--coming-soon' : ''}${showPreorderBadge ? ' product-card__sold-out-badge--preorder' : ''}`}
+                  aria-label={
+                    !available
+                      ? comingSoon
+                        ? 'Coming soon'
+                        : 'Sold out'
+                      : 'Pre-order'
+                  }
+                >
+                  <span>{!available ? (comingSoon ? 'Coming Soon' : 'Sold Out') : 'Pre-order'}</span>
                 </div>
               )}
               {/* {available && isLowStock && (
@@ -192,6 +215,7 @@ export function ProductItem({
             variantUrl={variantUrl}
             onClose={closeQuickView}
             comingSoon={comingSoon}
+            preorder={showCollectionPreorderBadge && preorder && !comingSoon}
           />,
           document.body,
         )}
@@ -205,11 +229,13 @@ function QuickViewPanel({
   variantUrl,
   onClose,
   comingSoon,
+  preorder,
 }: {
   handle: string;
   variantUrl: string;
   onClose: () => void;
   comingSoon: boolean;
+  preorder: boolean;
 }) {
   const fetcher = useFetcher<{product: QuickViewProduct}>();
   const cartFetcher = useFetcher({key: `qv-cart-${handle}`});
@@ -353,6 +379,20 @@ function QuickViewPanel({
                 <p className="quickview-panel__vendor">{product.vendor}</p>
               )}
               <h2 className="quickview-panel__title">{product.title}</h2>
+              {(preorder || comingSoon || !isVariantAvailable) && (
+                <div
+                  className={`quickview-panel__status-badge${preorder ? ' quickview-panel__status-badge--preorder' : ''}${comingSoon ? ' quickview-panel__status-badge--coming-soon' : ''}`}
+                  aria-live="polite"
+                >
+                  <span>
+                    {preorder
+                      ? 'Pre-order'
+                      : comingSoon
+                        ? 'Coming Soon'
+                        : 'Sold Out'}
+                  </span>
+                </div>
+              )}
               <p className="quickview-panel__price">
                 <Money data={(selectedVariant?.price ?? product.priceRange.minVariantPrice) as any} />
               </p>
@@ -424,7 +464,9 @@ function QuickViewPanel({
                       {addedToCart
                         ? 'Added to Cart'
                         : isVariantAvailable
-                          ? 'Add to Cart'
+                          ? preorder
+                            ? 'Pre-order'
+                            : 'Add to Cart'
                           : comingSoon
                             ? 'Coming Soon'
                             : 'Sold Out'}

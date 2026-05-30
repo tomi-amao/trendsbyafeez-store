@@ -4,20 +4,70 @@ import type {
   Maybe,
   ProductOptionValueSwatch,
 } from '@shopify/hydrogen/storefront-api-types';
+import {Truck} from '@phosphor-icons/react';
 import {AddToCartButton} from './AddToCartButton';
 import {useAside} from './Aside';
 import type {ProductFragment} from 'storefrontapi.generated';
+
+type PreorderConfig = {
+  isPreorder: boolean;
+  sellingPlanId?: string;
+  badgeText?: string;
+  badgeBackgroundColor?: string;
+  badgeTextColor?: string;
+  description?: string;
+  buttonText?: string;
+  estimatedShipText?: string;
+  depositPercentage?: number | null;
+};
+
+const estimatedShipDateFormatter = new Intl.DateTimeFormat(undefined, {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+function formatEstimatedShipText(value?: string): string | undefined {
+  if (!value) return undefined;
+
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  const dateParts = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
+  if (dateParts) {
+    const [, yearRaw, monthRaw, dayRaw] = dateParts;
+    const year = Number.parseInt(yearRaw, 10);
+    const month = Number.parseInt(monthRaw, 10);
+    const day = Number.parseInt(dayRaw, 10);
+
+    if (
+      Number.isFinite(year) &&
+      Number.isFinite(month) &&
+      Number.isFinite(day) &&
+      month >= 1 &&
+      month <= 12 &&
+      day >= 1 &&
+      day <= 31
+    ) {
+      return estimatedShipDateFormatter.format(new Date(year, month - 1, day));
+    }
+  }
+
+  return trimmed;
+}
 
 export function ProductForm({
   productOptions,
   selectedVariant,
   onSizeChartClick,
   comingSoon = false,
+  preorderConfig,
 }: {
   productOptions: MappedProductOptions[];
   selectedVariant: ProductFragment['selectedOrFirstAvailableVariant'];
   onSizeChartClick?: () => void;
   comingSoon?: boolean;
+  preorderConfig?: PreorderConfig;
 }) {
   const navigate = useNavigate();
   const {open} = useAside();
@@ -27,6 +77,38 @@ export function ProductForm({
     (opt) => opt.name.toLowerCase() === 'size',
   );
   const hasSizeSelected = sizeOption?.optionValues.some((v) => v.selected);
+  const isPreorder = preorderConfig?.isPreorder === true;
+
+  const buttonLabel = (() => {
+    if (isPreorder) {
+      if (hasSizeSelected === false && sizeOption) return 'Select a size';
+      return preorderConfig?.buttonText || 'Pre-order';
+    }
+
+    if (selectedVariant?.availableForSale) {
+      if (hasSizeSelected === false && sizeOption) return 'Select a size';
+      return 'Add to cart';
+    }
+
+    return comingSoon ? 'Coming soon' : 'Sold out';
+  })();
+
+  const buttonDisabled = isPreorder
+    ? !selectedVariant || (!!sizeOption && hasSizeSelected === false)
+    : !selectedVariant || !selectedVariant.availableForSale;
+
+  const depositText = (() => {
+    if (typeof preorderConfig?.depositPercentage !== 'number') return null;
+
+    if (preorderConfig.depositPercentage >= 100) {
+      return '';
+    }
+
+    return `Pay ${preorderConfig.depositPercentage}% today, remainder on fulfillment`;
+  })();
+  const estimatedShipText = formatEstimatedShipText(
+    preorderConfig?.estimatedShipText,
+  );
 
   return (
     <div className="product-form">
@@ -107,8 +189,43 @@ export function ProductForm({
           </div>
         );
       })}
+
+      {isPreorder && (
+        <div className="product-preorder" aria-live="polite">
+          {preorderConfig?.badgeText && (
+            <span
+              className="product-preorder__badge"
+              style={{
+                background: preorderConfig.badgeBackgroundColor || '#f4ead2',
+                color: preorderConfig.badgeTextColor || '#111',
+              }}
+            >
+              {preorderConfig.badgeText}
+            </span>
+          )}
+
+          {preorderConfig?.description && (
+            <p className="product-preorder__description">{preorderConfig.description}</p>
+          )}
+
+          {estimatedShipText && (
+            <p className="product-preorder__eta">
+              <Truck
+                aria-hidden="true"
+                className="product-preorder__eta-icon"
+                size={14}
+                weight="regular"
+              />
+              <span>Estimated ship date: {estimatedShipText}</span>
+            </p>
+          )}
+
+          {depositText && <p className="product-preorder__deposit">{depositText}</p>}
+        </div>
+      )}
+
       <AddToCartButton
-        disabled={!selectedVariant || !selectedVariant.availableForSale}
+        disabled={buttonDisabled}
         onClick={() => {
           open('cart');
         }}
@@ -118,19 +235,16 @@ export function ProductForm({
                 {
                   merchandiseId: selectedVariant.id,
                   quantity: 1,
+                  ...(isPreorder && preorderConfig?.sellingPlanId
+                    ? {sellingPlanId: preorderConfig.sellingPlanId}
+                    : {}),
                   selectedVariant,
                 },
               ]
             : []
         }
       >
-        {selectedVariant?.availableForSale
-          ? hasSizeSelected === false && sizeOption
-            ? 'Select a size'
-            : 'Add to cart'
-          : comingSoon
-            ? 'Coming soon'
-            : 'Sold out'}
+        {buttonLabel}
       </AddToCartButton>
     </div>
   );

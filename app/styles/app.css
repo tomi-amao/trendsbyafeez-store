@@ -1764,6 +1764,56 @@ html[data-header-state="hidden"] .collection-controls {
   cursor: not-allowed;
 }
 
+.product-preorder {
+  border: 1px solid var(--color-border);
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.85rem;
+  display: grid;
+  gap: 0.5rem;
+  background: var(--color-surface);
+  font-family: inherit;
+}
+
+.product-preorder__badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.32rem 0.58rem;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: inherit;
+}
+
+.product-preorder__description,
+.product-preorder__eta,
+.product-preorder__deposit {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.55;
+  text-transform: none;
+  font-family: inherit;
+  color: var(--color-muted);
+}
+
+.product-preorder__eta,
+.product-preorder__deposit {
+  color: var(--color-dark);
+}
+
+.product-preorder__eta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.product-preorder__eta-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
 /* Horizontal Product Tabs (denimtears style) */
 .product-tabs-horizontal {
   margin-top: 2rem;
@@ -3244,6 +3294,31 @@ html[data-header-state="hidden"] .collection-controls {
   margin: 0;
 }
 
+.quickview-panel__status-badge {
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--color-light);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.55rem;
+  width: fit-content;
+}
+
+.quickview-panel__status-badge span {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.quickview-panel__status-badge--coming-soon {
+  background: rgba(30, 30, 30, 0.85);
+}
+
+.quickview-panel__status-badge--preorder {
+  background: rgba(0, 0, 0, 0.78);
+}
+
 .quickview-panel__price {
   font-size: 0.9rem;
   color: var(--color-muted);
@@ -3406,6 +3481,10 @@ html[data-header-state="hidden"] .collection-controls {
 
 .product-card__sold-out-badge--coming-soon {
   background: rgba(30, 30, 30, 0.85);
+}
+
+.product-card__sold-out-badge--preorder {
+  background: rgba(0, 0, 0, 0.78);
 }
 
 /* ─── COMING SOON — Ghosted card, same as sold-out ────────────── */

@@ -341,6 +341,7 @@ export default function Collection() {
                           key={product.id}
                           product={product}
                           loading={index < 8 ? 'eager' : undefined}
+                          showCollectionPreorderBadge
                         />
                       ))}
                     </div>
@@ -392,6 +393,7 @@ export default function Collection() {
                                 key={item.product.id}
                                 product={item.product}
                                 loading={item.index < 8 ? 'eager' : undefined}
+                                showCollectionPreorderBadge
                               />
                             );
                           })}

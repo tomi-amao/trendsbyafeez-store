@@ -17,10 +17,381 @@ import {ProductItem} from '~/components/ProductItem';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import type {RecommendedProductsQuery} from 'storefrontapi.generated';
 
-export const meta: Route.MetaFunction = ({data}) => {
+type StoqPlanLike = {
+  id?: string | number;
+  enabled?: boolean | string | number | null;
+  shopify_selling_plan_id?: string;
+  shopify_selling_plan_group_id?: string | number;
+  preorder_badge_text?: string;
+  preorder_badge_background_color?: string;
+  preorder_badge_text_color?: string;
+  preorder_button_description?: string;
+  preorder_button_text?: string;
+  delivery_exact_time?: string;
+  shipping_text?: string;
+  billing_checkout_charge_type?: string;
+  billing_checkout_charge_value?: string | number;
+  billing_checkout_charge_percentage?: string | number;
+};
+
+type PreorderConfig = {
+  isPreorder: boolean;
+  sellingPlanId?: string;
+  badgeText?: string;
+  badgeBackgroundColor?: string;
+  badgeTextColor?: string;
+  description?: string;
+  buttonText?: string;
+  estimatedShipText?: string;
+  depositPercentage?: number | null;
+};
+
+function parseJsonSafe(value: string | null | undefined): unknown {
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function parseVariantPlanIds(value: string | null | undefined): string[] {
+  if (!value) return [];
+
+  const normalizeIdEntry = (entry: unknown): string | null => {
+    if (entry == null) return null;
+
+    if (typeof entry === 'string' || typeof entry === 'number') {
+      const v = String(entry).trim();
+      return v || null;
+    }
+
+    if (typeof entry === 'object') {
+      const obj = entry as Record<string, unknown>;
+      const candidate =
+        obj.id ??
+        obj.selling_plan_id ??
+        obj.sellingPlanId ??
+        obj.shopify_selling_plan_id ??
+        obj.shopify_selling_plan_group_id ??
+        obj.selling_plan_group_id;
+
+      if (candidate == null) return null;
+      const v = String(candidate).trim();
+      return v || null;
+    }
+
+    return null;
+  };
+
+  const parsed = parseJsonSafe(value);
+  if (Array.isArray(parsed)) {
+    return parsed
+      .map((v) => normalizeIdEntry(v))
+      .filter((v): v is string => !!v);
+  }
+
+  if (parsed && typeof parsed === 'object') {
+    const obj = parsed as Record<string, unknown>;
+    const candidate =
+      obj.selling_plan_ids ??
+      obj.sellingPlanIds ??
+      obj.plan_ids ??
+      obj.ids ??
+      obj.id;
+
+    if (Array.isArray(candidate)) {
+      return candidate
+        .map((v) => normalizeIdEntry(v))
+        .filter((v): v is string => !!v);
+    }
+    if (candidate != null) {
+      const normalized = normalizeIdEntry(candidate);
+      return normalized ? [normalized] : [];
+    }
+  }
+
+  if (typeof value === 'string' && value.includes(',')) {
+    return value
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+  }
+
+  return value ? [String(value)] : [];
+}
+
+function extractStoqPlans(raw: unknown): StoqPlanLike[] {
+  if (!raw) return [];
+
+  if (Array.isArray(raw)) {
+    return raw.filter((p): p is StoqPlanLike => !!p && typeof p === 'object');
+  }
+
+  if (typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj.selling_plans)) {
+      return obj.selling_plans.filter(
+        (p): p is StoqPlanLike => !!p && typeof p === 'object',
+      );
+    }
+  }
+
+  return [];
+}
+
+function toNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const n = Number.parseFloat(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+function isEnabledFlag(value: unknown): boolean {
+  if (value === true) return true;
+  if (typeof value === 'number') return value === 1;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return normalized === 'true' || normalized === '1' || normalized === 'yes';
+  }
+  return false;
+}
+
+function idTokens(raw: unknown): string[] {
+  if (raw == null) return [];
+  const value = String(raw).trim();
+  if (!value) return [];
+
+  const tokens = new Set<string>([value]);
+
+  const sellingPlanMatch = value.match(/^gid:\/\/shopify\/SellingPlan\/(\d+)$/);
+  if (sellingPlanMatch?.[1]) tokens.add(sellingPlanMatch[1]);
+
+  const sellingPlanGroupMatch = value.match(/^gid:\/\/shopify\/SellingPlanGroup\/(\d+)$/);
+  if (sellingPlanGroupMatch?.[1]) tokens.add(sellingPlanGroupMatch[1]);
+
+  if (/^\d+$/.test(value)) {
+    tokens.add(`gid://shopify/SellingPlan/${value}`);
+    tokens.add(`gid://shopify/SellingPlanGroup/${value}`);
+  }
+
+  return [...tokens];
+}
+
+function planMatchTokens(plan: StoqPlanLike): string[] {
   return [
-    {title: `TRENDSBYAFEEZ | ${data?.product.title ?? ''}`},
-    {rel: 'canonical', href: `/products/${data?.product.handle}`},
+    ...idTokens(plan.id),
+    ...idTokens(plan.shopify_selling_plan_id),
+    ...idTokens(plan.shopify_selling_plan_group_id),
+  ];
+}
+
+function variantNumericId(variantId: unknown): string | null {
+  const value = String(variantId ?? '');
+  const match = value.match(/ProductVariant\/(\d+)$/);
+  return match?.[1] ?? null;
+}
+
+function planVariantIds(plan: StoqPlanLike): string[] {
+  const raw = (plan as any)?.variant_ids;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((id) => String(id)).filter(Boolean);
+}
+
+function toSellingPlanGid(raw: unknown): string | undefined {
+  if (raw == null) return undefined;
+  const value = String(raw).trim();
+  if (!value) return undefined;
+
+  if (/^gid:\/\/shopify\/SellingPlan\/\d+$/.test(value)) return value;
+  if (/^\d+$/.test(value)) return `gid://shopify/SellingPlan/${value}`;
+
+  return undefined;
+}
+
+function planIdToString(plan: StoqPlanLike): string {
+  return plan?.id != null ? String(plan.id) : '';
+}
+
+function logPreorderDebug(
+  product: any,
+  stoqPlans: StoqPlanLike[],
+  rawShopMetafieldValue: string | null | undefined,
+) {
+  const selectedVariant = product?.selectedOrFirstAvailableVariant;
+  const selectedVariantPlanIds = parseVariantPlanIds(
+    selectedVariant?.stoqSellingPlanIds?.value,
+  );
+  const selectedVariantAllocationIds = (
+    (selectedVariant?.sellingPlanAllocations?.nodes ?? []) as any[]
+  )
+    .map((node) => node?.sellingPlan?.id)
+    .filter(Boolean);
+
+  const enabledPlans = stoqPlans
+    .filter((plan) => isEnabledFlag(plan.enabled))
+    .map((plan) => ({
+      id: planIdToString(plan),
+      enabledRaw: plan.enabled,
+      enabledNormalized: isEnabledFlag(plan.enabled),
+      shopifySellingPlanId: plan.shopify_selling_plan_id,
+      shopifySellingPlanGroupId: plan.shopify_selling_plan_group_id,
+      matchTokens: planMatchTokens(plan),
+      preorderButtonText: plan.preorder_button_text,
+    }));
+
+  const variantsRaw = [
+    selectedVariant,
+    ...(((product?.adjacentVariants ?? []) as any[]) || []),
+  ].filter(Boolean);
+
+  const seenVariantIds = new Set<string>();
+  const uniqueVariants = variantsRaw.filter((variant) => {
+    const id = String(variant?.id ?? '');
+    if (!id || seenVariantIds.has(id)) return false;
+    seenVariantIds.add(id);
+    return true;
+  });
+
+  const variantMatrix = uniqueVariants.map((variant) => {
+    const variantPlanIds = parseVariantPlanIds(variant?.stoqSellingPlanIds?.value);
+    const variantTokenSet = new Set(
+      variantPlanIds.flatMap((id) => idTokens(id)),
+    );
+    const matchingPlans = stoqPlans
+      .filter((plan) => planMatchTokens(plan).some((token) => variantTokenSet.has(token)))
+      .map((plan) => ({
+        id: planIdToString(plan),
+        enabledRaw: plan.enabled,
+        enabled: isEnabledFlag(plan.enabled),
+        shopifySellingPlanId: plan.shopify_selling_plan_id,
+        shopifySellingPlanGroupId: plan.shopify_selling_plan_group_id,
+        matchTokens: planMatchTokens(plan),
+      }));
+
+    const allocationIds = ((variant?.sellingPlanAllocations?.nodes ?? []) as any[])
+      .map((node) => node?.sellingPlan?.id)
+      .filter(Boolean);
+
+    return {
+      variantId: variant?.id,
+      title: variant?.title,
+      availableForSale: variant?.availableForSale,
+      stoqSellingPlanIdsRaw: variant?.stoqSellingPlanIds?.value ?? null,
+      stoqSellingPlanIds: variantPlanIds,
+      stoqSellingPlanIdTokens: [...variantTokenSet],
+      matchingPlans,
+      allocationSellingPlanIds: allocationIds,
+    };
+  });
+
+  const selectedPreorderConfig = getVariantPreorderConfig(selectedVariant, stoqPlans);
+
+  console.log('[STOQ preorder debug] Product evaluation', {
+    productHandle: product?.handle,
+    productId: product?.id,
+    shopMetafieldPresent: !!rawShopMetafieldValue,
+    shopMetafieldValuePreview: rawShopMetafieldValue?.slice(0, 260) ?? null,
+    stoqPlanCount: stoqPlans.length,
+    enabledPlans,
+    selectedVariant: {
+      id: selectedVariant?.id,
+      title: selectedVariant?.title,
+      availableForSale: selectedVariant?.availableForSale,
+      stoqSellingPlanIdsRaw: selectedVariant?.stoqSellingPlanIds?.value ?? null,
+      stoqSellingPlanIds: selectedVariantPlanIds,
+      allocationSellingPlanIds: selectedVariantAllocationIds,
+    },
+    selectedVariantPreorderConfig: selectedPreorderConfig,
+    variants: variantMatrix,
+  });
+}
+
+function getVariantPreorderConfig(
+  selectedVariant: any,
+  stoqPlans: StoqPlanLike[],
+): PreorderConfig {
+  if (!selectedVariant) return {isPreorder: false};
+
+  const variantPlanIds = parseVariantPlanIds(
+    selectedVariant?.stoqSellingPlanIds?.value,
+  );
+
+  const variantTokenSet = new Set(
+    variantPlanIds.flatMap((id) => idTokens(id)),
+  );
+
+  const selectedVariantNumericId = variantNumericId(selectedVariant?.id);
+  const allocationTokenSet = new Set(
+    ((selectedVariant?.sellingPlanAllocations?.nodes ?? []) as any[])
+      .flatMap((node) => idTokens(node?.sellingPlan?.id))
+      .filter(Boolean),
+  );
+
+  const matchedEnabledPlan = stoqPlans.find((plan) => {
+    if (!isEnabledFlag(plan.enabled)) return false;
+
+    const tokens = planMatchTokens(plan);
+
+    // Primary matching path: variant metafield selling_plan_ids
+    if (tokens.some((token) => variantTokenSet.has(token))) return true;
+
+    // STOQ fallback path: plan.variant_ids contains this variant id
+    const stoqVariantIds = planVariantIds(plan);
+    if (
+      selectedVariantNumericId &&
+      stoqVariantIds.includes(selectedVariantNumericId)
+    ) {
+      return true;
+    }
+
+    // Shopify fallback path: selected variant has a selling plan allocation matching this plan
+    if (tokens.some((token) => allocationTokenSet.has(token))) return true;
+
+    return false;
+  });
+
+  if (!matchedEnabledPlan) return {isPreorder: false};
+
+  const allocationSellingPlanId = selectedVariant?.sellingPlanAllocations?.nodes?.[0]?.sellingPlan?.id as
+    | string
+    | undefined;
+  const sellingPlanId =
+    toSellingPlanGid(matchedEnabledPlan.shopify_selling_plan_id) ||
+    allocationSellingPlanId;
+
+  const depositPercentage =
+    matchedEnabledPlan.billing_checkout_charge_type === 'percentage'
+      ? toNumber(
+          matchedEnabledPlan.billing_checkout_charge_percentage ??
+            matchedEnabledPlan.billing_checkout_charge_value,
+        )
+      : null;
+
+  return {
+    isPreorder: true,
+    sellingPlanId,
+    badgeText: matchedEnabledPlan.preorder_badge_text,
+    badgeBackgroundColor: matchedEnabledPlan.preorder_badge_background_color,
+    badgeTextColor: matchedEnabledPlan.preorder_badge_text_color,
+    description: matchedEnabledPlan.preorder_button_description,
+    buttonText: matchedEnabledPlan.preorder_button_text,
+    estimatedShipText:
+      matchedEnabledPlan.delivery_exact_time || matchedEnabledPlan.shipping_text,
+    depositPercentage,
+  };
+}
+
+export const meta: Route.MetaFunction = ({
+  data,
+}: {
+  data?: {product?: {title?: string | null; handle?: string | null}};
+}) => {
+  return [
+    {title: `TRENDSBYAFEEZ | ${data?.product?.title ?? ''}`},
+    {rel: 'canonical', href: `/products/${data?.product?.handle ?? ''}`},
   ];
 };
 
@@ -33,12 +404,13 @@ export async function loader(args: Route.LoaderArgs) {
 async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   const {handle} = params;
   const {storefront} = context;
+  const env = (context as any).env as Record<string, string | undefined>;
 
   if (!handle) {
     throw new Error('Expected product handle to be defined');
   }
 
-  const [{product}] = await Promise.all([
+  const [{product, shop}] = await Promise.all([
     storefront.query(PRODUCT_QUERY, {
       variables: {handle, selectedOptions: getSelectedProductOptions(request)},
       cache: storefront.CacheShort(),
@@ -51,7 +423,16 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
 
   redirectIfHandleIsLocalized(request, {handle, data: product});
 
-  return {product};
+  const stoqSellingPlansRaw = parseJsonSafe(
+    shop?.stoqSellingPlans?.value,
+  );
+  const stoqSellingPlans = extractStoqPlans(stoqSellingPlansRaw);
+
+  if (env?.STOQ_PREORDER_DEBUG === 'true') {
+    logPreorderDebug(product, stoqSellingPlans, shop?.stoqSellingPlans?.value);
+  }
+
+  return {product, stoqSellingPlans};
 }
 
 function loadDeferredData({context}: Route.LoaderArgs) {
@@ -68,7 +449,8 @@ function loadDeferredData({context}: Route.LoaderArgs) {
 }
 
 export default function Product() {
-  const {product, recommendedProducts} = useLoaderData<typeof loader>();
+  const {product, recommendedProducts, stoqSellingPlans} =
+    useLoaderData<typeof loader>();
 
   const selectedVariant = useOptimisticVariant(
     product.selectedOrFirstAvailableVariant,
@@ -83,6 +465,7 @@ export default function Product() {
   });
 
   const {title, descriptionHtml, vendor} = product;
+  const preorderConfig = getVariantPreorderConfig(selectedVariant as any, stoqSellingPlans);
 
   // Collect all images for gallery
   const images = product.images?.nodes || [];
@@ -127,7 +510,7 @@ export default function Product() {
             ref={snapRef}
             onScroll={handleSnapScroll}
           >
-            {(images.length > 0 ? images : selectedVariant?.image ? [selectedVariant.image] : []).map((img, idx) => (
+            {(images.length > 0 ? images : selectedVariant?.image ? [selectedVariant.image] : []).map((img: any, idx: number) => (
               <div key={img.id || idx} className="product-gallery__mobile-snap-item">
                 <Image
                   alt={img.altText || `${title} ${idx + 1}`}
@@ -142,7 +525,7 @@ export default function Product() {
           {/* Mobile: thumbnail strip — synced with snap gallery */}
           {images.length > 1 && (
             <div className="product-gallery__thumbs" ref={thumbsRef}>
-              {images.map((img, idx) => (
+              {images.map((img: any, idx: number) => (
                 <button
                   key={img.id || idx}
                   onClick={() => scrollToImage(idx)}
@@ -163,7 +546,7 @@ export default function Product() {
 
           {/* Desktop: scrollable image column — always rendered, falls back to variant image */}
           <div className="product-gallery__scroll">
-            {(images.length > 0 ? images : selectedVariant?.image ? [selectedVariant.image] : []).map((img, idx) => (
+            {(images.length > 0 ? images : selectedVariant?.image ? [selectedVariant.image] : []).map((img: any, idx: number) => (
               <div
                 key={img.id}
                 className="product-gallery__scroll-item"
@@ -204,6 +587,7 @@ export default function Product() {
             selectedVariant={selectedVariant}
             onSizeChartClick={() => setSizeChartOpen(true)}
             comingSoon={product.tags?.some((t: string) => t.toUpperCase() === 'COMING_SOON') ?? false}
+            preorderConfig={preorderConfig}
           />
 
           {/* Horizontal Tabs (denimtears style) */}
@@ -321,9 +705,9 @@ export default function Product() {
                 </div>
                 <div className="products-carousel">
                   {response.products.nodes
-                    .filter((p) => p.id !== product.id)
+                    .filter((p: any) => p.id !== product.id)
                     .slice(0, 4)
-                    .map((p) => (
+                    .map((p: any) => (
                       <div key={p.id} className="products-carousel__item">
                         <ProductItem product={p} />
                       </div>
@@ -434,6 +818,17 @@ const PRODUCT_VARIANT_FRAGMENT = `#graphql
       amount
       currencyCode
     }
+    stoqSellingPlanIds: metafield(namespace: "restockrocket_production", key: "selling_plan_ids") {
+      value
+    }
+    sellingPlanAllocations(first: 20) {
+      nodes {
+        sellingPlan {
+          id
+          name
+        }
+      }
+    }
   }
 ` as const;
 
@@ -498,6 +893,11 @@ const PRODUCT_QUERY = `#graphql
   ) @inContext(country: $country, language: $language) {
     product(handle: $handle) {
       ...Product
+    }
+    shop {
+      stoqSellingPlans: metafield(namespace: "restockrocket_production", key: "selling_plans") {
+        value
+      }
     }
   }
   ${PRODUCT_FRAGMENT}
