@@ -1759,6 +1759,18 @@ html[data-header-state="hidden"] .collection-controls {
   color: #504f56;
 }
 
+.add-to-cart-button--preorder {
+  background: #8a1538;
+  border: none;
+  color: #ffe7a3;
+}
+
+.add-to-cart-button--preorder:hover:not(:disabled) {
+  background: #f2c23a;
+  color: #611126;
+  border: none;
+}
+
 .add-to-cart-button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -3406,6 +3418,18 @@ html[data-header-state="hidden"] .collection-controls {
 
 .quickview-panel__add-to-cart:hover:not(:disabled) {
   background: #222;
+}
+
+.quickview-panel__add-to-cart--preorder {
+  background: #8a1538;
+  color: #ffe7a3;
+  border: none;
+}
+
+.quickview-panel__add-to-cart--preorder:hover:not(:disabled) {
+  background: #f2c23a;
+  color: #611126;
+  border: none;
 }
 
 .quickview-panel__add-to-cart:disabled {

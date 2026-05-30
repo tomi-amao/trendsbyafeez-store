@@ -225,6 +225,7 @@ export function ProductForm({
       )}
 
       <AddToCartButton
+        className={isPreorder ? 'add-to-cart-button--preorder' : undefined}
         disabled={buttonDisabled}
         onClick={() => {
           open('cart');

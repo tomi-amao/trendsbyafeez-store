@@ -458,7 +458,7 @@ function QuickViewPanel({
                   {() => (
                     <button
                       type="submit"
-                      className={`quickview-panel__add-to-cart${addedToCart ? ' quickview-panel__add-to-cart--added' : ''}`}
+                      className={`quickview-panel__add-to-cart${preorder ? ' quickview-panel__add-to-cart--preorder' : ''}${addedToCart ? ' quickview-panel__add-to-cart--added' : ''}`}
                       disabled={!isVariantAvailable || cartFetcher.state !== 'idle'}
                     >
                       {addedToCart
