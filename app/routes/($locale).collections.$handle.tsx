@@ -1,13 +1,24 @@
 import {Await, redirect, useLoaderData, useSearchParams, useNavigate, Link} from 'react-router';
 import type {Route} from './+types/collections.$handle';
 import {getPaginationVariables, Analytics, Image, Pagination} from '@shopify/hydrogen';
-import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {ProductItem} from '~/components/ProductItem';
 import type {ProductItemFragment} from 'storefrontapi.generated';
 import {Suspense, useState, useCallback} from 'react';
 import React from 'react';
 import {getAdminAccessToken, fetchAdminFiles} from '~/utils/shopify-admin.server';
+
+function isExcludedByTags(
+  product: {tags?: string[] | null},
+  excludedTagsUpper: string[],
+) {
+  if (!excludedTagsUpper.length) return false;
+  const tags = product.tags ?? [];
+  if (!tags.length) return false;
+
+  const tagSet = new Set(tags.map((tag) => tag.toUpperCase()));
+  return excludedTagsUpper.some((excluded) => tagSet.has(excluded));
+}
 
 /* ─── Editorial Tile ─────────────────────────────────────────────── */
 interface EditorialImage {
@@ -49,8 +60,12 @@ function EditorialTile({image, editorialIndex, link}: {image: EditorialImage; ed
   );
 }
 
-export const meta: Route.MetaFunction = ({data}) => {
-  return [{title: `TRENDSBYAFEEZ | ${data?.collection.title ?? ''} Collection`}];
+export const meta: Route.MetaFunction = ({
+  data,
+}: {
+  data?: {collection?: {title?: string | null}};
+}) => {
+  return [{title: `TRENDSBYAFEEZ | ${data?.collection?.title ?? ''} Collection`}];
 };
 
 export async function loader(args: Route.LoaderArgs) {
@@ -62,6 +77,7 @@ export async function loader(args: Route.LoaderArgs) {
 async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   const {handle} = params;
   const {storefront} = context;
+  const env = (context as any).env as Record<string, string | undefined>;
   const paginationVariables = getPaginationVariables(request, {pageBy: 24});
 
   if (!handle) {
@@ -72,6 +88,11 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   const sortKey = url.searchParams.get('sort') || 'COLLECTION_DEFAULT';
   const reverse = url.searchParams.get('reverse') === 'true';
   const availableOnly = url.searchParams.get('available') === 'true';
+  const excludedTagsUpper = (env?.EXCLUDED_PRODUCT_TAGS ?? '')
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .map((tag) => tag.toUpperCase());
 
   const filters: {available?: boolean}[] = availableOnly ? [{available: true}] : [];
 
@@ -94,7 +115,7 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
 
   redirectIfHandleIsLocalized(request, {handle, data: collection});
 
-  return {collection};
+  return {collection, excludedTagsUpper};
 }
 
 function loadDeferredData({context, params}: Route.LoaderArgs) {
@@ -144,7 +165,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function Collection() {
-  const {collection, editorialImages} = useLoaderData<typeof loader>();
+  const {collection, editorialImages, excludedTagsUpper} = useLoaderData<typeof loader>();
   const editorialConfig = Object.entries(EDITORIAL_COLLECTIONS).find(
     ([key]) => collection.handle.includes(key),
   )?.[1];
@@ -187,7 +208,9 @@ export default function Collection() {
     [navigate, searchParams],
   );
 
-  const productCount = collection.products.nodes.length;
+  const productCount = collection.products.nodes.filter(
+    (product: ProductItemFragment) => !isExcludedByTags(product, excludedTagsUpper),
+  ).length;
   const currentSortLabel =
     SORT_OPTIONS.find(
       (o) => o.value === currentSort && o.reverse === currentReverse,
@@ -299,7 +322,9 @@ export default function Collection() {
       <div className="collection-products">
         <Pagination connection={collection.products}>
           {({nodes: rawNodes, isLoading, PreviousLink, NextLink}) => {
-            const nodes = rawNodes as ProductItemFragment[];
+            const nodes = (rawNodes as ProductItemFragment[]).filter(
+              (product) => !isExcludedByTags(product, excludedTagsUpper),
+            );
 
             return (
               <div>
