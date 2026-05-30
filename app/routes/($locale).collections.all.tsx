@@ -18,24 +18,32 @@ export async function loader(args: Route.LoaderArgs) {
 
 async function loadCriticalData({context, request}: Route.LoaderArgs) {
   const {storefront} = context;
+  const env = (context as any).env as Record<string, string | undefined>;
   const paginationVariables = getPaginationVariables(request, {pageBy: 24});
   const url = new URL(request.url);
   const sortKey = url.searchParams.get('sort') || 'BEST_SELLING';
   const reverse = url.searchParams.get('reverse') === 'true';
   const availableOnly = url.searchParams.get('available') === 'true';
-  const query = availableOnly ? 'available_for_sale:true' : undefined;
+  const hiddenTags = (env?.EXCLUDED_PRODUCT_TAGS ?? '')
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 
-  const [{products}] = await Promise.all([
-    storefront.query(CATALOG_QUERY, {
-      variables: {
-        ...paginationVariables,
-        sortKey: sortKey as any,
-        reverse,
-        query,
-      },
-      cache: storefront.CacheShort(),
-    }),
-  ]);
+  const queryParts: string[] = [];
+  if (availableOnly) queryParts.push('available_for_sale:true');
+  hiddenTags.forEach((tag) => queryParts.push(`-tag:${JSON.stringify(tag)}`));
+  const query = queryParts.length > 0 ? queryParts.join(' ') : undefined;
+
+  const {products} = await storefront.query(CATALOG_QUERY, {
+    variables: {
+      ...paginationVariables,
+      sortKey: sortKey as any,
+      reverse,
+      query,
+    },
+    cache: storefront.CacheShort(),
+  });
+
   return {products};
 }
 
