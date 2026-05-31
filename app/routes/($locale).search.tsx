@@ -1,4 +1,5 @@
-import {useLoaderData} from 'react-router';
+import {useEffect, useRef} from 'react';
+import {useLoaderData, useNavigation, useSubmit} from 'react-router';
 import type {Route} from './+types/search';
 import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
 import {SearchForm} from '~/components/SearchForm';
@@ -38,6 +39,37 @@ export async function loader({request, context}: Route.LoaderArgs) {
  */
 export default function SearchPage() {
   const {type, term, result, error} = useLoaderData<typeof loader>();
+  const submit = useSubmit();
+  const navigation = useNavigation();
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, []);
+
+  const isSearching =
+    navigation.state !== 'idle' &&
+    Boolean(navigation.location?.search.includes('q='));
+
+  const handleSearchInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const form = event.currentTarget.form;
+    if (!form) return;
+
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    searchDebounceRef.current = setTimeout(() => {
+      submit(form, {replace: true, preventScrollReset: true});
+    }, 180);
+  };
+
   if (type === 'predictive') return null;
 
   return (
@@ -45,40 +77,41 @@ export default function SearchPage() {
       {/* ── Hero search bar ──────────────────────────────────────── */}
       <div className="search-page__hero">
         <div className="search-page__hero-inner">
-          <SearchForm>
-            {({inputRef}) => (
-              <div className="search-page__form">
-                <svg
-                  className="search-page__form-icon"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 18 18"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M12 12L16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-                <input
-                  defaultValue={term}
-                  name="q"
-                  placeholder="Search products, collections…"
-                  ref={inputRef}
-                  type="search"
-                  className="search-page__input"
-                  autoFocus
-                />
-                <button type="submit" className="search-page__submit">
-                  Search
-                </button>
-              </div>
+          <div className="search-page__search-box">
+            <SearchForm>
+              {({inputRef}) => (
+                <div className="search-page__form">
+                  <svg
+                    className="search-page__form-icon"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M12 12L16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  <input
+                    defaultValue={term}
+                    name="q"
+                    placeholder="Search products, collections..."
+                    ref={inputRef}
+                    type="search"
+                    className="search-page__input"
+                    onChange={handleSearchInputChange}
+                    autoFocus
+                  />
+                </div>
+              )}
+            </SearchForm>
+            {term && (
+              <p className="search-page__term-label">
+                Showing results for <strong>&ldquo;{term}&rdquo;</strong>
+                {isSearching ? ' Updating...' : ''}
+              </p>
             )}
-          </SearchForm>
-          {term && (
-            <p className="search-page__term-label">
-              Showing results for <strong>&ldquo;{term}&rdquo;</strong>
-            </p>
-          )}
+          </div>
         </div>
       </div>
 
