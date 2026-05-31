@@ -17,6 +17,41 @@ interface QvImage {
   height?: number | null;
 }
 
+const estimatedShipDateFormatter = new Intl.DateTimeFormat(undefined, {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+function formatEstimatedShipText(value?: string): string | undefined {
+  if (!value) return undefined;
+
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  const dateParts = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
+  if (dateParts) {
+    const [, yearRaw, monthRaw, dayRaw] = dateParts;
+    const year = Number.parseInt(yearRaw, 10);
+    const month = Number.parseInt(monthRaw, 10);
+    const day = Number.parseInt(dayRaw, 10);
+
+    if (
+      Number.isFinite(year) &&
+      Number.isFinite(month) &&
+      Number.isFinite(day) &&
+      month >= 1 &&
+      month <= 12 &&
+      day >= 1 &&
+      day <= 31
+    ) {
+      return estimatedShipDateFormatter.format(new Date(year, month - 1, day));
+    }
+  }
+
+  return trimmed;
+}
+
 interface QuickViewProduct {
   id: string;
   title: string;
@@ -39,6 +74,14 @@ interface QuickViewProduct {
     }>;
   };
 }
+
+type QuickViewPreorderConfig = {
+  isPreorder: boolean;
+  sellingPlanId?: string;
+  buttonText?: string;
+  estimatedShipText?: string;
+  depositPercentage?: number | null;
+};
 
 type ProductCardProduct =
   | CollectionItemFragment
@@ -237,7 +280,10 @@ function QuickViewPanel({
   comingSoon: boolean;
   preorder: boolean;
 }) {
-  const fetcher = useFetcher<{product: QuickViewProduct}>();
+  const fetcher = useFetcher<{
+    product: QuickViewProduct;
+    preorderByVariantId?: Record<string, QuickViewPreorderConfig>;
+  }>();
   const cartFetcher = useFetcher({key: `qv-cart-${handle}`});
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [activeImgIdx, setActiveImgIdx] = useState(0);
@@ -279,6 +325,20 @@ function QuickViewPanel({
     product?.variants.nodes.find((v) =>
       v.selectedOptions.every((opt) => selectedOptions[opt.name] === opt.value),
     ) ?? product?.variants.nodes[0];
+
+  const selectedPreorderConfig =
+    selectedVariant && fetcher.data?.preorderByVariantId
+      ? fetcher.data.preorderByVariantId[selectedVariant.id]
+      : undefined;
+  const isPreorder = selectedPreorderConfig?.isPreorder ?? preorder;
+  const preorderButtonText = selectedPreorderConfig?.buttonText;
+  const preorderEstimatedShipText = formatEstimatedShipText(
+    selectedPreorderConfig?.estimatedShipText,
+  );
+  const preorderLineAttributes =
+    isPreorder && preorderEstimatedShipText
+      ? [{key: 'Estimated ship date', value: preorderEstimatedShipText}]
+      : undefined;
 
   const isVariantAvailable = selectedVariant?.availableForSale ?? false;
 
@@ -379,13 +439,13 @@ function QuickViewPanel({
                 <p className="quickview-panel__vendor">{product.vendor}</p>
               )}
               <h2 className="quickview-panel__title">{product.title}</h2>
-              {(preorder || comingSoon || !isVariantAvailable) && (
+              {(isPreorder || comingSoon || !isVariantAvailable) && (
                 <div
-                  className={`quickview-panel__status-badge${preorder ? ' quickview-panel__status-badge--preorder' : ''}${comingSoon ? ' quickview-panel__status-badge--coming-soon' : ''}`}
+                  className={`quickview-panel__status-badge${isPreorder ? ' quickview-panel__status-badge--preorder' : ''}${comingSoon ? ' quickview-panel__status-badge--coming-soon' : ''}`}
                   aria-live="polite"
                 >
                   <span>
-                    {preorder
+                    {isPreorder
                       ? 'Pre-order'
                       : comingSoon
                         ? 'Coming Soon'
@@ -396,6 +456,11 @@ function QuickViewPanel({
               <p className="quickview-panel__price">
                 <Money data={(selectedVariant?.price ?? product.priceRange.minVariantPrice) as any} />
               </p>
+              {isPreorder && preorderEstimatedShipText && (
+                <p className="quickview-panel__preorder-note">
+                  Estimated ship date: {preorderEstimatedShipText}
+                </p>
+              )}
 
               {product.options.map((opt) => {
                 if (opt.optionValues.length <= 1) return null;
@@ -450,6 +515,12 @@ function QuickViewPanel({
                       {
                         merchandiseId: selectedVariant.id,
                         quantity: 1,
+                        ...(preorderLineAttributes
+                          ? {attributes: preorderLineAttributes}
+                          : {}),
+                        ...(isPreorder && selectedPreorderConfig?.sellingPlanId
+                          ? {sellingPlanId: selectedPreorderConfig.sellingPlanId}
+                          : {}),
                       } satisfies OptimisticCartLineInput,
                     ],
                   }}
@@ -458,14 +529,14 @@ function QuickViewPanel({
                   {() => (
                     <button
                       type="submit"
-                      className={`quickview-panel__add-to-cart${preorder ? ' quickview-panel__add-to-cart--preorder' : ''}${addedToCart ? ' quickview-panel__add-to-cart--added' : ''}`}
+                      className={`quickview-panel__add-to-cart${isPreorder ? ' quickview-panel__add-to-cart--preorder' : ''}${addedToCart ? ' quickview-panel__add-to-cart--added' : ''}`}
                       disabled={!isVariantAvailable || cartFetcher.state !== 'idle'}
                     >
                       {addedToCart
                         ? 'Added to Cart'
                         : isVariantAvailable
-                          ? preorder
-                            ? 'Pre-order'
+                          ? isPreorder
+                            ? preorderButtonText || 'Pre-order'
                             : 'Add to Cart'
                           : comingSoon
                             ? 'Coming Soon'

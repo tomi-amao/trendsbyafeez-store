@@ -432,7 +432,10 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     logPreorderDebug(product, stoqSellingPlans, shop?.stoqSellingPlans?.value);
   }
 
-  return {product, stoqSellingPlans};
+  const shippingPolicyBody = shop?.shippingPolicy?.body ?? null;
+  const refundPolicyBody = shop?.refundPolicy?.body ?? null;
+
+  return {product, stoqSellingPlans, shippingPolicyBody, refundPolicyBody};
 }
 
 function loadDeferredData({context}: Route.LoaderArgs) {
@@ -449,7 +452,13 @@ function loadDeferredData({context}: Route.LoaderArgs) {
 }
 
 export default function Product() {
-  const {product, recommendedProducts, stoqSellingPlans} =
+  const {
+    product,
+    recommendedProducts,
+    stoqSellingPlans,
+    shippingPolicyBody,
+    refundPolicyBody,
+  } =
     useLoaderData<typeof loader>();
 
   const selectedVariant = useOptimisticVariant(
@@ -620,37 +629,51 @@ export default function Product() {
                 />
               )}
               {activeTab === 'shipping' && (
-                <div className="product-tabs-horizontal__panel product-tabs-horizontal__panel--policy">
-                  <p>TRENDSBYAFEEZ ships worldwide.</p>
-                  <p>Orders are processed and dispatched within 1–2 business days. During promotional periods or seasonal releases, processing may take up to 3–7 business days.</p>
-                  <p>Once your order has been shipped, you will receive a confirmation email with tracking details.</p>
-                  <h4>International Shipping</h4>
-                  <p>All international orders are shipped on a DAP (Delivered At Place) basis.</p>
-                  <p>Duties and taxes are not included at checkout and are the responsibility of the customer upon arrival in the destination country. These charges are set by local customs authorities and are outside of our control.</p>
-                  <p>Please note, shipments to the United States may be subject to additional tariffs on selected items.</p>
-                  <h4>Delivery</h4>
-                  <p>Shipping costs and estimated delivery times are calculated at checkout.</p>
-                </div>
+                shippingPolicyBody ? (
+                  <div
+                    className="product-tabs-horizontal__panel product-tabs-horizontal__panel--policy"
+                    dangerouslySetInnerHTML={{__html: shippingPolicyBody}}
+                  />
+                ) : (
+                  <div className="product-tabs-horizontal__panel product-tabs-horizontal__panel--policy">
+                    <p>TRENDSBYAFEEZ ships worldwide.</p>
+                    <p>Orders are processed and dispatched within 1–2 business days. During promotional periods or seasonal releases, processing may take up to 3–7 business days.</p>
+                    <p>Once your order has been shipped, you will receive a confirmation email with tracking details.</p>
+                    <h4>International Shipping</h4>
+                    <p>All international orders are shipped on a DAP (Delivered At Place) basis.</p>
+                    <p>Duties and taxes are not included at checkout and are the responsibility of the customer upon arrival in the destination country. These charges are set by local customs authorities and are outside of our control.</p>
+                    <p>Please note, shipments to the United States may be subject to additional tariffs on selected items.</p>
+                    <h4>Delivery</h4>
+                    <p>Shipping costs and estimated delivery times are calculated at checkout.</p>
+                  </div>
+                )
               )}
               {activeTab === 'returns' && (
-                <div className="product-tabs-horizontal__panel product-tabs-horizontal__panel--policy">
-                  <p>We operate a strict no returns, no refunds policy. All sales are final.</p>
-                  <p>We do not accept returns or offer refunds for: change of mind, incorrect size selection, or preference/dissatisfaction after purchase.</p>
-                  <p>We strongly recommend reviewing all product details, sizing information, and imagery before placing an order.</p>
-                  <h4>Damaged or Faulty Items</h4>
-                  <p>We will only offer a replacement or refund if an item arrives damaged or faulty. To be eligible:</p>
-                  <ul>
-                    <li>You must contact us within 48 hours of delivery</li>
-                    <li>Provide clear photo/video evidence of the issue</li>
-                    <li>Item(s) must be unused and in original condition</li>
-                  </ul>
-                  <p>If approved, we will offer a replacement (if available) or issue a refund.</p>
-                  <h4>Non-Eligible Claims</h4>
-                  <p>We do not accept claims for minor colour variations due to lighting or screen display, normal wear and tear, or incorrect sizing choices.</p>
-                  <h4>Contact</h4>
-                  <p>For all enquiries contact <a href="mailto:info@trendsbyafeez.com">info@trendsbyafeez.com</a> with your order number, description of issue, and supporting images.</p>
-                  <p>By completing your purchase, you agree to this policy.</p>
-                </div>
+                refundPolicyBody ? (
+                  <div
+                    className="product-tabs-horizontal__panel product-tabs-horizontal__panel--policy"
+                    dangerouslySetInnerHTML={{__html: refundPolicyBody}}
+                  />
+                ) : (
+                  <div className="product-tabs-horizontal__panel product-tabs-horizontal__panel--policy">
+                    <p>We operate a strict no returns, no refunds policy. All sales are final.</p>
+                    <p>We do not accept returns or offer refunds for: change of mind, incorrect size selection, or preference/dissatisfaction after purchase.</p>
+                    <p>We strongly recommend reviewing all product details, sizing information, and imagery before placing an order.</p>
+                    <h4>Damaged or Faulty Items</h4>
+                    <p>We will only offer a replacement or refund if an item arrives damaged or faulty. To be eligible:</p>
+                    <ul>
+                      <li>You must contact us within 48 hours of delivery</li>
+                      <li>Provide clear photo/video evidence of the issue</li>
+                      <li>Item(s) must be unused and in original condition</li>
+                    </ul>
+                    <p>If approved, we will offer a replacement (if available) or issue a refund.</p>
+                    <h4>Non-Eligible Claims</h4>
+                    <p>We do not accept claims for minor colour variations due to lighting or screen display, normal wear and tear, or incorrect sizing choices.</p>
+                    <h4>Contact</h4>
+                    <p>For all enquiries contact <a href="mailto:info@trendsbyafeez.com">info@trendsbyafeez.com</a> with your order number, description of issue, and supporting images.</p>
+                    <p>By completing your purchase, you agree to this policy.</p>
+                  </div>
+                )
               )}
             </div>
           </div>
@@ -897,6 +920,12 @@ const PRODUCT_QUERY = `#graphql
     shop {
       stoqSellingPlans: metafield(namespace: "restockrocket_production", key: "selling_plans") {
         value
+      }
+      shippingPolicy {
+        body
+      }
+      refundPolicy {
+        body
       }
     }
   }

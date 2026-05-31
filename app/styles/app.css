@@ -3354,6 +3354,13 @@ html[data-header-state="hidden"] .collection-controls {
   margin: 0;
 }
 
+.quickview-panel__preorder-note {
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  letter-spacing: 0.02em;
+}
+
 .quickview-panel__option {
   display: flex;
   flex-direction: column;
