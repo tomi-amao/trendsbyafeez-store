@@ -17,11 +17,32 @@ interface QvImage {
   height?: number | null;
 }
 
-const estimatedShipDateFormatter = new Intl.DateTimeFormat(undefined, {
-  month: 'long',
-  day: 'numeric',
-  year: 'numeric',
-});
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+function toEstimatedShipDate(value: string): Date | null {
+  const dateParts = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
+  if (!dateParts) return null;
+
+  const [, yearRaw, monthRaw, dayRaw] = dateParts;
+  const year = Number.parseInt(yearRaw, 10);
+  const month = Number.parseInt(monthRaw, 10);
+  const day = Number.parseInt(dayRaw, 10);
+
+  if (
+    !Number.isFinite(year) ||
+    !Number.isFinite(month) ||
+    !Number.isFinite(day) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return null;
+  }
+
+  const parsedDate = new Date(year, month - 1, day);
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+}
 
 function formatEstimatedShipText(value?: string): string | undefined {
   if (!value) return undefined;
@@ -29,24 +50,16 @@ function formatEstimatedShipText(value?: string): string | undefined {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
 
-  const dateParts = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
-  if (dateParts) {
-    const [, yearRaw, monthRaw, dayRaw] = dateParts;
-    const year = Number.parseInt(yearRaw, 10);
-    const month = Number.parseInt(monthRaw, 10);
-    const day = Number.parseInt(dayRaw, 10);
+  const estimatedShipDate = toEstimatedShipDate(trimmed);
+  if (estimatedShipDate) {
+    const now = new Date();
+    const weekUpperBound = Math.max(
+      1,
+      Math.ceil((estimatedShipDate.getTime() - now.getTime()) / MS_PER_WEEK),
+    );
+    const weekLowerBound = Math.max(0, weekUpperBound - 1);
 
-    if (
-      Number.isFinite(year) &&
-      Number.isFinite(month) &&
-      Number.isFinite(day) &&
-      month >= 1 &&
-      month <= 12 &&
-      day >= 1 &&
-      day <= 31
-    ) {
-      return estimatedShipDateFormatter.format(new Date(year, month - 1, day));
-    }
+    return `${weekLowerBound}-${weekUpperBound} weeks`;
   }
 
   return trimmed;
