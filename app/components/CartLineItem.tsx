@@ -23,6 +23,12 @@ export function CartLineItem({
 }) {
   const {id, merchandise} = line;
   const {product, title, image, selectedOptions} = merchandise;
+  const lineAttributes = (line.attributes ?? []).filter(
+    (attribute) =>
+      attribute?.key &&
+      attribute?.value &&
+      !attribute.key.startsWith('_'),
+  );
   const lineItemUrl = useVariantUrl(product.handle, selectedOptions);
   const {close} = useAside();
   const lineItemChildren = childrenMap[id];
@@ -75,6 +81,20 @@ export function CartLineItem({
                 </span>
               ))}
           </div>
+
+          {lineAttributes.length > 0 && (
+            <div className="cart-line__attributes">
+              {lineAttributes.map((attribute) => (
+                <p
+                  key={`${id}-${attribute.key}`}
+                  className="cart-line__attribute"
+                >
+                  <span className="cart-line__attribute-key">{attribute.key}:</span>{' '}
+                  <span>{attribute.value}</span>
+                </p>
+              ))}
+            </div>
+          )}
 
           <div className="cart-line__bottom">
             <CartLineQuantity line={line} />

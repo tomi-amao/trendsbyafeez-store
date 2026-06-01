@@ -170,6 +170,7 @@ export default function AllProducts() {
               key={product.id}
               product={product}
               loading={index < 8 ? 'eager' : undefined}
+              showCollectionPreorderBadge
             />
           )}
         </PaginatedResourceSection>

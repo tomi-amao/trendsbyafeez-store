@@ -113,11 +113,9 @@ function SearchResultsProducts({
       <Pagination connection={products}>
         {({nodes, isLoading, NextLink, PreviousLink}) => (
           <div>
-            <div className="search-pagination-link">
-              <PreviousLink>
-                {isLoading ? 'Loading…' : <span className="search-pagination-btn">↑ Load previous</span>}
-              </PreviousLink>
-            </div>
+            <PreviousLink className="search-pagination-link">
+              {isLoading ? 'Loading…' : <span className="search-pagination-btn">↑ Load previous</span>}
+            </PreviousLink>
             <div className="search-products-grid">
               {nodes.map((product) => {
                 const productUrl = urlWithTrackingParams({
@@ -160,11 +158,9 @@ function SearchResultsProducts({
                 );
               })}
             </div>
-            <div className="search-pagination-link">
-              <NextLink>
-                {isLoading ? 'Loading…' : <span className="search-pagination-btn">Load more ↓</span>}
-              </NextLink>
-            </div>
+            <NextLink className="search-pagination-link">
+              {isLoading ? 'Loading…' : <span className="search-pagination-btn">Load more ↓</span>}
+            </NextLink>
           </div>
         )}
       </Pagination>
